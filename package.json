@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "katex": "^0.16.34",
+    "mathlive": "^0.108.3",
     "vue": "^3.5.25"
   },
   "devDependencies": {
