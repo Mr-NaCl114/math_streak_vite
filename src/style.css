@@ -1,6 +1,6 @@
 :root {
   font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1.5;
+  line-height: 1.45;
   font-weight: 400;
   color: #0d1216;
   background: #f8fbff;
@@ -21,16 +21,17 @@ body {
 #app {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 20px 16px 44px;
 }
 
 h1, h2, h3, p { margin: 0; }
 
-.page { display: flex; flex-direction: column; gap: 16px; }
+.page { display: flex; flex-direction: column; gap: 14px; }
 
 .panel,
 .stats-block,
-.modal-card {
+.modal-card,
+.account-menu {
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid rgba(0, 149, 217, 0.2);
@@ -38,12 +39,16 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .arena-header {
-  padding: 4px 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 2px;
 }
 
 .arena-header h1 {
   font-size: 32px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: #0d1216;
 }
 
@@ -51,44 +56,72 @@ h1, h2, h3, p { margin: 0; }
   color: rgba(13, 18, 22, 0.72);
 }
 
+.account-area {
+  position: relative;
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+
 .stats-banner {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .stats-block {
-  padding: 14px;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  padding: 10px 12px;
+  min-height: 80px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.stats-block:hover { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(13, 18, 22, 0.14); }
+.compact-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stats-block:hover { transform: translateY(-1px); box-shadow: 0 10px 16px rgba(13, 18, 22, 0.14); }
 .life-block { grid-column: span 3; }
 .stats-banner .stats-block:nth-child(n + 2) { grid-column: span 1; }
 
 .stats-label {
-  font-size: 12px;
+  font-size: 11px;
   color: rgba(13, 18, 22, 0.6);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .stats-value {
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1;
   color: #0d1216;
 }
 
+.life-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .tip {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 11px;
   color: rgba(13, 18, 22, 0.62);
 }
 
 .progress-track {
-  margin-top: 10px;
-  width: 100%;
-  height: 10px;
+  flex: 1;
+  height: 8px;
   border-radius: 999px;
   background: #dcebf3;
   overflow: hidden;
@@ -100,8 +133,9 @@ h1, h2, h3, p { margin: 0; }
   transition: width 0.35s ease;
 }
 
-.panel { padding: 18px; }
-.question-panel h2, .extra-panel h2 { margin-bottom: 12px; }
+.panel { padding: 16px; }
+.question-panel h2, .extra-panel h2 { margin-bottom: 10px; }
+.answering-count { margin-bottom: 8px; color: rgba(13, 18, 22, 0.76); font-size: 13px; }
 .question-meta { color: rgba(13, 18, 22, 0.7); margin-bottom: 8px; }
 .question-description { margin-bottom: 14px; white-space: pre-wrap; }
 .answer-form { display: flex; flex-direction: column; gap: 10px; }
@@ -134,12 +168,19 @@ h1, h2, h3, p { margin: 0; }
   box-shadow: 0 0 0 3px rgba(0, 149, 217, 0.17);
 }
 
+.auth-input {
+  border: 1px solid rgba(0, 149, 217, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
 button {
   border: none;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
@@ -161,6 +202,11 @@ button:hover { transform: translateY(-1px); }
   background: #f4faff;
 }
 
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+}
+
 .modal-mask {
   position: fixed;
   inset: 0;
@@ -174,7 +220,7 @@ button:hover { transform: translateY(-1px); }
 
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
 .fade-slide-enter-from,
@@ -187,4 +233,6 @@ button:hover { transform: translateY(-1px); }
   .stats-banner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .life-block { grid-column: span 2; }
   .stats-banner .stats-block:nth-child(n + 2) { grid-column: span 1; }
+  .arena-header { flex-direction: column; }
+  .account-menu { position: static; width: 100%; }
 }

@@ -32,11 +32,27 @@ export function submitAnswer(payload) {
   })
 }
 
+export function loginAccount(payload) {
+  return requestJson('/api/account/login', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function registerAccount(payload) {
+  return requestJson('/api/account/register', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
 export const GAME_WS_URL = 'wss://lodsced.cloud/ws/game'
 
 // 以下接口为后续后端扩展预留
 export const RESERVED_ENDPOINTS = {
   milestones: '/api/game/milestones',
   failedQuestions: '/api/game/failed-questions',
-  chinaHeatmap: '/api/game/failed-heatmap'
+  failedAccountLevelHeatmap: '/api/game/failed-account-level-heatmap',
+  accountHistoryQuestions: '/api/account/history-questions',
+  accountProfile: '/api/account/profile'
 }

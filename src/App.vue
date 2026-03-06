@@ -1,8 +1,8 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import 'mathlive'
 import renderMathInElement from 'katex/contrib/auto-render'
-import { fetchCurrentQuestion, GAME_WS_URL, submitAnswer } from './api/game'
+import { fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
 
 const loadingQuestion = ref(false)
 const prefetching = ref(false)
@@ -12,14 +12,39 @@ const submitMessage = ref('')
 const wsStatus = ref('连接中')
 const showMilestoneModal = ref(false)
 const showFailModal = ref(false)
+const showLoginModal = ref(false)
+const authMode = ref('login')
+const authMessage = ref('')
+const showAccountMenu = ref(false)
 const reconnectTimer = ref(null)
 
 const question = ref(null)
 const prefetchedQuestion = ref(null)
+const questionRenderRef = ref(null)
 
 const answerForm = reactive({
   choice: '',
   latexAnswer: ''
+})
+
+const loginForm = reactive({
+  account: '',
+  password: ''
+})
+
+const registerForm = reactive({
+  account: '',
+  nickname: '',
+  password: ''
+})
+
+const accountState = reactive({
+  loggedIn: false,
+  account: '',
+  nickname: '',
+  accountLevel: '--',
+  accuracy: '--',
+  historyQuestions: []
 })
 
 const gameStats = reactive({
@@ -27,12 +52,13 @@ const gameStats = reactive({
   maxStreak: 0,
   life: 0,
   maxLife: 1,
-  ipLimit: 0
+  accountTodayRemainingCount: 0,
+  currentQuestionAnsweringCount: 0,
+  failedAccountLevelHeatmap: []
 })
 
 const milestoneList = ref([])
 const failedQuestionList = ref([])
-const questionContentRef = ref(null)
 
 let wsClient = null
 
@@ -56,20 +82,17 @@ function resetAnswerInput() {
   answerForm.latexAnswer = ''
 }
 
-async function renderMathBlocks() {
+async function renderMathContent() {
   await nextTick()
-  const optionNodes = Array.from(document.querySelectorAll('.option-text'))
-  const targets = [questionContentRef.value, ...optionNodes].filter(Boolean)
-  targets.forEach(target => {
-    renderMathInElement(target, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false },
-        { left: '\\(', right: '\\)', display: false },
-        { left: '\\[', right: '\\]', display: true }
-      ],
-      throwOnError: false
-    })
+  if (!questionRenderRef.value) return
+  renderMathInElement(questionRenderRef.value, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+      { left: '\\[', right: '\\]', display: true }
+    ],
+    throwOnError: false
   })
 }
 
@@ -86,7 +109,7 @@ async function loadQuestion({ usePrefetch = true } = {}) {
     }
 
     resetAnswerInput()
-    await renderMathBlocks()
+    await renderMathContent()
     prefetchNextQuestion()
   } catch (error) {
     errorMessage.value = error.message || '题目加载失败'
@@ -97,7 +120,6 @@ async function loadQuestion({ usePrefetch = true } = {}) {
 
 async function prefetchNextQuestion() {
   if (prefetching.value || prefetchedQuestion.value) return
-
   prefetching.value = true
   try {
     const incoming = await fetchCurrentQuestion()
@@ -118,15 +140,13 @@ async function handleSubmit() {
   submitMessage.value = ''
 
   try {
-    const payload = {
+    const result = await submitAnswer({
       type: question.value.type,
       questionId: question.value.questionId,
       answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
-    }
+    })
 
-    const result = await submitAnswer(payload)
-    const correct = result.correct === 1
-    submitMessage.value = correct
+    submitMessage.value = result.correct === 1
       ? '回答正确，连胜继续！'
       : `回答错误，参考答案：${result.correctLatexAnswer || '以后端返回为准'}`
 
@@ -143,11 +163,11 @@ function handleMathInput(event) {
 }
 
 function applyStats(data) {
-  gameStats.totalStreak = data.totalStreak ?? 0
-  gameStats.maxStreak = data.maxStreak ?? 0
-  gameStats.life = data.life ?? 0
-  gameStats.maxLife = data.maxLife ?? 1
-  gameStats.ipLimit = data.ipLimit ?? 0
+  if (!data) return
+  Object.assign(gameStats, data)
+  if (data.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
+  if (data.accuracy !== undefined) accountState.accuracy = data.accuracy
+  if (data.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions || []
 }
 
 function connectWebsocket() {
@@ -161,8 +181,9 @@ function connectWebsocket() {
   wsClient.onmessage = event => {
     try {
       const message = JSON.parse(event.data)
-      if (message.code === '0000' && message.data) {
+      if (message.code === '0000') {
         applyStats(message.data)
+        renderMathContent()
       }
     } catch {
       wsStatus.value = '消息解析失败'
@@ -179,12 +200,58 @@ function connectWebsocket() {
   }
 }
 
-watch(
-  () => question.value?.questionId,
-  async () => {
-    await renderMathBlocks()
+async function submitLogin() {
+  authMessage.value = ''
+  try {
+    const data = await loginAccount({
+      account: loginForm.account,
+      password: loginForm.password
+    })
+    accountState.loggedIn = true
+    accountState.account = data?.account || loginForm.account
+    accountState.nickname = data?.nickname || ''
+    if (data?.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
+    if (data?.accuracy !== undefined) accountState.accuracy = data.accuracy
+    if (data?.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions
+    showLoginModal.value = false
+  } catch (error) {
+    authMessage.value = error.message || '登录失败'
   }
-)
+}
+
+async function submitRegister() {
+  authMessage.value = ''
+  try {
+    await registerAccount({
+      account: registerForm.account,
+      nickname: registerForm.nickname,
+      password: registerForm.password
+    })
+    authMode.value = 'login'
+    authMessage.value = '注册成功，请登录。'
+  } catch (error) {
+    authMessage.value = error.message || '注册失败'
+  }
+}
+
+function toggleAuthPanel() {
+  if (accountState.loggedIn) {
+    showAccountMenu.value = !showAccountMenu.value
+    return
+  }
+  showLoginModal.value = true
+  authMode.value = 'login'
+}
+
+function logout() {
+  accountState.loggedIn = false
+  accountState.account = ''
+  accountState.nickname = ''
+  accountState.accountLevel = '--'
+  accountState.accuracy = '--'
+  accountState.historyQuestions = []
+  showAccountMenu.value = false
+}
 
 onMounted(async () => {
   await loadQuestion({ usePrefetch: false })
@@ -200,41 +267,59 @@ onBeforeUnmount(() => {
 <template>
   <main class="page">
     <header class="arena-header">
-      <h1>Math Streak Arena</h1>
-      <p>按连胜进阶难度，实时协同同场挑战。</p>
+      <div>
+        <h1>Math Streak Arena</h1>
+        <p>按连胜进阶难度，实时协同同场挑战。</p>
+      </div>
+
+      <div class="account-area">
+        <button class="secondary-btn" type="button" @click="toggleAuthPanel">
+          {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
+        </button>
+
+        <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
+          <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
+          <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
+          <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
+          <button class="secondary-btn" type="button" @click="logout">退出登录</button>
+        </article>
+      </div>
     </header>
 
     <section class="stats-banner">
-      <article class="stats-block life-block">
-        <p class="stats-label">生命值</p>
-        <p class="stats-value">{{ gameStats.life }}/{{ gameStats.maxLife }}</p>
-        <div class="progress-track">
-          <div class="progress-fill" :style="{ width: `${lifeProgress}%` }"></div>
+      <article class="stats-block life-block compact-card">
+        <p class="stats-label">❤️ 生命值</p>
+        <div class="life-inline">
+          <p class="stats-value">{{ gameStats.life }}/{{ gameStats.maxLife }}</p>
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: `${lifeProgress}%` }"></div>
+          </div>
         </div>
       </article>
-      <article class="stats-block">
-        <p class="stats-label">当前连胜</p>
+      <article class="stats-block compact-card">
+        <p class="stats-label">🔥 当前连胜</p>
         <p class="stats-value">{{ gameStats.totalStreak }}</p>
       </article>
-      <article class="stats-block">
-        <p class="stats-label">最大连胜</p>
+      <article class="stats-block compact-card">
+        <p class="stats-label">🏆 最大连胜</p>
         <p class="stats-value">{{ gameStats.maxStreak }}</p>
       </article>
-      <article class="stats-block">
-        <p class="stats-label">IP 限制</p>
-        <p class="stats-value">{{ gameStats.ipLimit }}</p>
+      <article class="stats-block compact-card">
+        <p class="stats-label">📅 今日剩余次数</p>
+        <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
         <p class="tip">WebSocket：{{ wsStatus }}</p>
       </article>
     </section>
 
     <section class="panel question-panel">
       <h2>当前题目</h2>
+      <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
-      <Transition name="fade-slide" mode="out-in">
-        <div v-if="question" :key="question.questionId" class="question-container">
+      <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
+        <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
           <p class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</p>
-          <p ref="questionContentRef" class="question-description">{{ normalizeQuestionText(question.description) }}</p>
+          <div class="question-description">{{ normalizeQuestionText(question.description) }}</div>
 
           <form class="answer-form" @submit.prevent="handleSubmit">
             <template v-if="question.type === 1">
@@ -277,8 +362,8 @@ onBeforeUnmount(() => {
         <button type="button" class="secondary-btn" @click="showFailModal = true">查看连胜中断题目</button>
       </div>
       <div class="heatmap-placeholder">
-        <h3>失败来源地理热力图（中国省区）</h3>
-        <p>前端仅预留图层容器，数据与模糊地址由后端接口提供。</p>
+        <h3>失败账号等级热力图</h3>
+        <p>后端 WebSocket 字段：failedAccountLevelHeatmap</p>
       </div>
     </section>
 
@@ -295,6 +380,30 @@ onBeforeUnmount(() => {
         <h3>连胜中断题目</h3>
         <p v-if="failedQuestionList.length === 0">暂无后端返回数据。</p>
         <button class="secondary-btn" @click="showFailModal = false">关闭</button>
+      </article>
+    </div>
+
+    <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
+      <article class="modal-card">
+        <div class="auth-tabs">
+          <button class="secondary-btn" type="button" @click="authMode = 'login'">登录</button>
+          <button class="secondary-btn" type="button" @click="authMode = 'register'">注册</button>
+        </div>
+
+        <form v-if="authMode === 'login'" class="answer-form" @submit.prevent="submitLogin">
+          <input v-model="loginForm.account" class="auth-input" type="text" placeholder="账号" required />
+          <input v-model="loginForm.password" class="auth-input" type="password" placeholder="密码" required />
+          <button class="primary-btn" type="submit">登录</button>
+        </form>
+
+        <form v-else class="answer-form" @submit.prevent="submitRegister">
+          <input v-model="registerForm.account" class="auth-input" type="text" placeholder="账号" required />
+          <input v-model="registerForm.nickname" class="auth-input" type="text" placeholder="昵称" required />
+          <input v-model="registerForm.password" class="auth-input" type="password" placeholder="密码" required />
+          <button class="primary-btn" type="submit">注册</button>
+        </form>
+
+        <p v-if="authMessage" class="submit-message">{{ authMessage }}</p>
       </article>
     </div>
   </main>
