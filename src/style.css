@@ -3,7 +3,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #0d1216;
-  background: #8fd9f2;
+  background: #f8fbff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,7 +15,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: linear-gradient(180deg, #8fd9f2 0%, #dff6ff 100%);
+  background: #f8fbff;
 }
 
 #app {
@@ -28,23 +28,28 @@ h1, h2, h3, p { margin: 0; }
 
 .page { display: flex; flex-direction: column; gap: 16px; }
 
-.page-header,
 .panel,
 .stats-block,
 .modal-card {
   background: #ffffff;
   border-radius: 14px;
-  border: 1px solid rgba(0, 149, 217, 0.25);
-  box-shadow: 0 8px 18px rgba(13, 18, 22, 0.12);
+  border: 1px solid rgba(0, 149, 217, 0.2);
+  box-shadow: 0 8px 18px rgba(13, 18, 22, 0.1);
 }
 
 .arena-header {
-  padding: 20px;
-  background: linear-gradient(120deg, #0095d9 0%, #8fd9f2 100%);
+  padding: 4px 2px;
+}
+
+.arena-header h1 {
+  font-size: 32px;
+  margin-bottom: 4px;
   color: #0d1216;
 }
 
-.arena-header h1 { font-size: 30px; margin-bottom: 6px; }
+.arena-header p {
+  color: rgba(13, 18, 22, 0.72);
+}
 
 .stats-banner {
   display: grid;
@@ -57,25 +62,41 @@ h1, h2, h3, p { margin: 0; }
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.stats-block:hover { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(13, 18, 22, 0.15); }
+.stats-block:hover { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(13, 18, 22, 0.14); }
 .life-block { grid-column: span 3; }
 .stats-banner .stats-block:nth-child(n + 2) { grid-column: span 1; }
 
-.stats-value { font-size: 20px; font-weight: 700; color: #0d1216; }
-.tip { margin-top: 4px; font-size: 12px; color: rgba(13, 18, 22, 0.68); }
+.stats-label {
+  font-size: 12px;
+  color: rgba(13, 18, 22, 0.6);
+  margin-bottom: 3px;
+}
+
+.stats-value {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #0d1216;
+}
+
+.tip {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(13, 18, 22, 0.62);
+}
 
 .progress-track {
   margin-top: 10px;
   width: 100%;
-  height: 9px;
+  height: 10px;
   border-radius: 999px;
-  background: rgba(143, 217, 242, 0.6);
+  background: #dcebf3;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0095d9, #0d1216);
+  background: #0095d9;
   transition: width 0.35s ease;
 }
 
@@ -89,20 +110,20 @@ h1, h2, h3, p { margin: 0; }
   display: flex;
   gap: 8px;
   align-items: center;
-  background: rgba(143, 217, 242, 0.2);
-  border: 1px solid rgba(0, 149, 217, 0.35);
+  background: #f4faff;
+  border: 1px solid rgba(0, 149, 217, 0.25);
   border-radius: 8px;
   padding: 10px;
   transition: background-color 0.2s ease;
 }
 
-.option:hover { background: rgba(143, 217, 242, 0.35); }
+.option:hover { background: #eaf6ff; }
 
 .latex-label { font-weight: 600; }
 .latex-editor {
   width: 100%;
   min-height: 54px;
-  border: 1px solid rgba(0, 149, 217, 0.6);
+  border: 1px solid rgba(0, 149, 217, 0.55);
   border-radius: 8px;
   padding: 10px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -110,7 +131,7 @@ h1, h2, h3, p { margin: 0; }
 
 .latex-editor:focus-within {
   border-color: #0095d9;
-  box-shadow: 0 0 0 3px rgba(0, 149, 217, 0.18);
+  box-shadow: 0 0 0 3px rgba(0, 149, 217, 0.17);
 }
 
 button {
@@ -125,7 +146,8 @@ button {
 button:hover { transform: translateY(-1px); }
 .primary-btn { background: #0095d9; color: #ffffff; }
 .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.secondary-btn { background: #0d1216; color: #8fd9f2; }
+.secondary-btn { background: #8fd9f2; color: #0d1216; font-weight: 700; }
+.secondary-btn:hover { background: #6ecdee; }
 
 .submit-message { margin-top: 10px; color: #0095d9; }
 .error { color: #d92e00; margin-bottom: 8px; }
@@ -133,10 +155,10 @@ button:hover { transform: translateY(-1px); }
 .extra-actions { display: flex; gap: 10px; margin-bottom: 14px; }
 
 .heatmap-placeholder {
-  border: 1px dashed rgba(0, 149, 217, 0.75);
+  border: 1px dashed rgba(0, 149, 217, 0.6);
   border-radius: 10px;
   padding: 16px;
-  background: rgba(143, 217, 242, 0.25);
+  background: #f4faff;
 }
 
 .modal-mask {

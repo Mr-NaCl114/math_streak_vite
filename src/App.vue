@@ -199,22 +199,30 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="page">
-    <header class="page-header arena-header">
+    <header class="arena-header">
       <h1>Math Streak Arena</h1>
       <p>按连胜进阶难度，实时协同同场挑战。</p>
     </header>
 
     <section class="stats-banner">
       <article class="stats-block life-block">
-        <p class="stats-value">生命值 {{ gameStats.life }}/{{ gameStats.maxLife }}</p>
+        <p class="stats-label">生命值</p>
+        <p class="stats-value">{{ gameStats.life }}/{{ gameStats.maxLife }}</p>
         <div class="progress-track">
           <div class="progress-fill" :style="{ width: `${lifeProgress}%` }"></div>
         </div>
       </article>
-      <article class="stats-block"><p class="stats-value">当前连胜 {{ gameStats.totalStreak }}</p></article>
-      <article class="stats-block"><p class="stats-value">最大连胜 {{ gameStats.maxStreak }}</p></article>
       <article class="stats-block">
-        <p class="stats-value">IP 限制 {{ gameStats.ipLimit }}</p>
+        <p class="stats-label">当前连胜</p>
+        <p class="stats-value">{{ gameStats.totalStreak }}</p>
+      </article>
+      <article class="stats-block">
+        <p class="stats-label">最大连胜</p>
+        <p class="stats-value">{{ gameStats.maxStreak }}</p>
+      </article>
+      <article class="stats-block">
+        <p class="stats-label">IP 限制</p>
+        <p class="stats-value">{{ gameStats.ipLimit }}</p>
         <p class="tip">WebSocket：{{ wsStatus }}</p>
       </article>
     </section>
