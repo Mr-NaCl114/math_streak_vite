@@ -10,7 +10,7 @@ const prefetching = ref(false)
 const submitting = ref(false)
 const answerCompleted = ref(false)
 const loadingAiAnswer = ref(false)
-const showAiAnswerModal = ref(false)
+const showAiAnswerPanel = ref(false)
 const errorMessage = ref('')
 const submitMessage = ref('')
 const aiAnswerMessage = ref('')
@@ -99,7 +99,7 @@ function resetAnswerInput() {
   submitMessage.value = ''
   aiAnswerMessage.value = ''
   aiAnswerError.value = ''
-  showAiAnswerModal.value = false
+  showAiAnswerPanel.value = false
 }
 
 const mathRenderOptions = {
@@ -127,7 +127,7 @@ async function renderAiAnswerMath() {
 async function requestAiAnswer() {
   if (!question.value || loadingAiAnswer.value) return
 
-  showAiAnswerModal.value = true
+  showAiAnswerPanel.value = true
   loadingAiAnswer.value = true
   aiAnswerError.value = ''
 
@@ -146,6 +146,9 @@ async function requestAiAnswer() {
 }
 
 async function handleNextQuestion() {
+  showAiAnswerPanel.value = false
+  aiAnswerMessage.value = ''
+  aiAnswerError.value = ''
   await loadQuestion({ usePrefetch: true })
 }
 
@@ -450,6 +453,27 @@ onBeforeUnmount(() => {
       </section>
     </section>
 
+    <Transition name="fade-slide" @after-enter="renderAiAnswerMath">
+      <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
+        <div class="modal-heading">
+          <div>
+            <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
+            <h3>AI 解析</h3>
+          </div>
+          <button class="secondary-btn" type="button" @click="showAiAnswerPanel = false">收起解析</button>
+        </div>
+
+        <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
+        <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
+        <div
+          v-if="aiAnswerMessage"
+          ref="aiAnswerRenderRef"
+          class="markdown-body ai-answer-content"
+          v-html="renderedAiAnswer"
+        ></div>
+      </section>
+    </Transition>
+
     <div v-if="showMilestoneModal" class="modal-mask" @click.self="showMilestoneModal = false">
       <article class="modal-card">
         <h3>最大连胜里程碑</h3>
@@ -466,26 +490,6 @@ onBeforeUnmount(() => {
       </article>
     </div>
 
-    <div v-if="showAiAnswerModal" class="modal-mask" @click.self="showAiAnswerModal = false">
-      <article class="modal-card ai-answer-card">
-        <div class="modal-heading">
-          <div>
-            <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
-            <h3>AI 解析</h3>
-          </div>
-          <button class="secondary-btn" type="button" @click="showAiAnswerModal = false">关闭</button>
-        </div>
-
-        <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
-        <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
-        <div
-          v-if="aiAnswerMessage"
-          ref="aiAnswerRenderRef"
-          class="markdown-body ai-answer-content"
-          v-html="renderedAiAnswer"
-        ></div>
-      </article>
-    </div>
 
     <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
       <article class="modal-card">
