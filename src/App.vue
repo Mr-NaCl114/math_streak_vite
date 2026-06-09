@@ -1,7 +1,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import 'mathlive'
+import katex from 'katex'
 import MarkdownIt from 'markdown-it'
+import texmath from 'markdown-it-texmath'
+import 'markdown-it-texmath/css/texmath.css'
 import renderMathInElement from 'katex/contrib/auto-render'
 import { fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
 
@@ -71,6 +74,13 @@ const markdownRenderer = new MarkdownIt({
   html: false,
   linkify: true,
   breaks: true
+}).use(texmath, {
+  engine: katex,
+  delimiters: ['dollars', 'brackets', 'beg_end'],
+  katexOptions: {
+    throwOnError: false,
+    strict: false
+  }
 })
 
 let wsClient = null
