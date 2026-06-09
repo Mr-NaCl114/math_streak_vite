@@ -100,7 +100,20 @@ function normalizeQuestionText(value) {
   return (value || '').replace(/\\n/g, '\n')
 }
 
-const renderedAiAnswer = computed(() => markdownRenderer.render(normalizeQuestionText(aiAnswerMessage.value)))
+function normalizeLooseMathBlocks(value) {
+  return normalizeQuestionText(value)
+    .replace(
+      /(^|\n)[ \t]*\[[ \t]*\n([\s\S]*?)\n[ \t]*\](?=\n|$)/g,
+      '$1$$$$\n$2\n$$$$'
+    )
+    .replace(
+      /(^|\n)[ \t]*\[([^\n\]]*(?:\\[a-zA-Z]+|[=^_])[^\n\]]*)\][ \t]*(?=\n|$)/g,
+      '$1$$$$$2$$$$'
+    )
+}
+
+const renderedAiAnswer = computed(() => markdownRenderer.render(normalizeLooseMathBlocks(aiAnswerMessage.value)))
+const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(normalizeLooseMathBlocks(submitMessage.value)))
 
 function resetAnswerInput() {
   answerForm.choice = ''
@@ -215,7 +228,9 @@ async function handleSubmit() {
 
     submitMessage.value = result.correct === 1
       ? '回答正确，连胜继续！请手动进入下一题。'
-      : `回答错误，参考答案：${result.correctLatexAnswer || '以后端返回为准'}`
+      : result.correctLatexAnswer
+        ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
+        : '回答错误，参考答案：以后端返回为准'
     answerCompleted.value = true
   } catch (error) {
     submitMessage.value = error.message || '提交失败'
@@ -447,7 +462,7 @@ onBeforeUnmount(() => {
         </Transition>
 
         <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
-        <p v-if="submitMessage" class="submit-message">{{ submitMessage }}</p>
+        <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
       </section>
 
       <section class="panel extra-panel">
