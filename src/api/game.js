@@ -1,4 +1,4 @@
-const BASE_URL = 'https://lodsced.cloud'
+const BASE_URL = ''
 
 async function requestJson(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {

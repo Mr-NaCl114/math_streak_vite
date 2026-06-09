@@ -307,7 +307,6 @@ onBeforeUnmount(() => {
       <article class="stats-block compact-card">
         <p class="stats-label">📅 今日剩余次数</p>
         <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
-        <p class="tip">WebSocket：{{ wsStatus }}</p>
       </article>
     </section>
 
