@@ -1,14 +1,23 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import 'mathlive'
+import katex from 'katex'
+import MarkdownIt from 'markdown-it'
+import texmath from 'markdown-it-texmath'
+import 'markdown-it-texmath/css/texmath.css'
 import renderMathInElement from 'katex/contrib/auto-render'
-import { fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
+import { fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
 
 const loadingQuestion = ref(false)
 const prefetching = ref(false)
 const submitting = ref(false)
+const answerCompleted = ref(false)
+const loadingAiAnswer = ref(false)
+const showAiAnswerPanel = ref(false)
 const errorMessage = ref('')
 const submitMessage = ref('')
+const aiAnswerMessage = ref('')
+const aiAnswerError = ref('')
 const wsStatus = ref('连接中')
 const showMilestoneModal = ref(false)
 const showFailModal = ref(false)
@@ -21,6 +30,7 @@ const reconnectTimer = ref(null)
 const question = ref(null)
 const prefetchedQuestion = ref(null)
 const questionRenderRef = ref(null)
+const aiAnswerRenderRef = ref(null)
 
 const answerForm = reactive({
   choice: '',
@@ -60,6 +70,19 @@ const gameStats = reactive({
 const milestoneList = ref([])
 const failedQuestionList = ref([])
 
+const markdownRenderer = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true
+}).use(texmath, {
+  engine: katex,
+  delimiters: ['dollars', 'brackets', 'beg_end'],
+  katexOptions: {
+    throwOnError: false,
+    strict: false
+  }
+})
+
 let wsClient = null
 
 const lifeProgress = computed(() => {
@@ -68,7 +91,7 @@ const lifeProgress = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  if (!question.value || submitting.value) return false
+  if (!question.value || submitting.value || answerCompleted.value) return false
   if (question.value.type === 1) return Boolean(answerForm.choice)
   return Boolean(answerForm.latexAnswer.trim())
 })
@@ -77,24 +100,81 @@ function normalizeQuestionText(value) {
   return (value || '').replace(/\\n/g, '\n')
 }
 
+function normalizeLooseMathBlocks(value) {
+  return normalizeQuestionText(value)
+    .replace(
+      /(^|\n)[ \t]*\[[ \t]*\n([\s\S]*?)\n[ \t]*\](?=\n|$)/g,
+      '$1$$$$\n$2\n$$$$'
+    )
+    .replace(
+      /(^|\n)[ \t]*\[([^\n\]]*(?:\\[a-zA-Z]+|[=^_])[^\n\]]*)\][ \t]*(?=\n|$)/g,
+      '$1$$$$$2$$$$'
+    )
+}
+
+const renderedAiAnswer = computed(() => markdownRenderer.render(normalizeLooseMathBlocks(aiAnswerMessage.value)))
+const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(normalizeLooseMathBlocks(submitMessage.value)))
+
 function resetAnswerInput() {
   answerForm.choice = ''
   answerForm.latexAnswer = ''
+  answerCompleted.value = false
+  submitMessage.value = ''
+  aiAnswerMessage.value = ''
+  aiAnswerError.value = ''
+  showAiAnswerPanel.value = false
+}
+
+const mathRenderOptions = {
+  delimiters: [
+    { left: '$$', right: '$$', display: true },
+    { left: '$', right: '$', display: false },
+    { left: '\\(', right: '\\)', display: false },
+    { left: '\\[', right: '\\]', display: true }
+  ],
+  throwOnError: false
 }
 
 async function renderMathContent() {
   await nextTick()
   if (!questionRenderRef.value) return
-  renderMathInElement(questionRenderRef.value, {
-    delimiters: [
-      { left: '$$', right: '$$', display: true },
-      { left: '$', right: '$', display: false },
-      { left: '\\(', right: '\\)', display: false },
-      { left: '\\[', right: '\\]', display: true }
-    ],
-    throwOnError: false
-  })
+  renderMathInElement(questionRenderRef.value, mathRenderOptions)
 }
+
+async function renderAiAnswerMath() {
+  await nextTick()
+  if (!aiAnswerRenderRef.value) return
+  renderMathInElement(aiAnswerRenderRef.value, mathRenderOptions)
+}
+
+async function requestAiAnswer() {
+  if (!question.value || loadingAiAnswer.value) return
+
+  showAiAnswerPanel.value = true
+  loadingAiAnswer.value = true
+  aiAnswerError.value = ''
+
+  try {
+    const data = await fetchAiAnswer({
+      type: question.value.type,
+      questionId: question.value.questionId
+    })
+    aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
+    await renderAiAnswerMath()
+  } catch (error) {
+    aiAnswerError.value = error.message || 'AI 解析加载失败'
+  } finally {
+    loadingAiAnswer.value = false
+  }
+}
+
+async function handleNextQuestion() {
+  showAiAnswerPanel.value = false
+  aiAnswerMessage.value = ''
+  aiAnswerError.value = ''
+  await loadQuestion({ usePrefetch: true })
+}
+
 
 async function loadQuestion({ usePrefetch = true } = {}) {
   loadingQuestion.value = true
@@ -147,10 +227,11 @@ async function handleSubmit() {
     })
 
     submitMessage.value = result.correct === 1
-      ? '回答正确，连胜继续！'
-      : `回答错误，参考答案：${result.correctLatexAnswer || '以后端返回为准'}`
-
-    await loadQuestion({ usePrefetch: true })
+      ? '回答正确，连胜继续！请手动进入下一题。'
+      : result.correctLatexAnswer
+        ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
+        : '回答错误，参考答案：以后端返回为准'
+    answerCompleted.value = true
   } catch (error) {
     submitMessage.value = error.message || '提交失败'
   } finally {
@@ -311,12 +392,28 @@ onBeforeUnmount(() => {
       </article>
     </section>
 
-    <section class="panel question-panel">
-      <h2>当前题目</h2>
-      <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <section class="content-grid">
+      <section class="panel question-panel">
+        <div class="question-heading">
+          <div>
+            <h2>当前题目</h2>
+          </div>
+          <Transition name="ai-button">
+            <button
+              v-if="answerCompleted"
+              class="ai-analysis-btn"
+              type="button"
+              :disabled="loadingAiAnswer"
+              @click="requestAiAnswer"
+            >
+              {{ loadingAiAnswer ? '解析中...' : 'AI解析' }}
+            </button>
+          </Transition>
+        </div>
+        <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
+        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
-      <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
+        <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
         <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
           <p class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</p>
           <div class="question-description">{{ normalizeQuestionText(question.description) }}</div>
@@ -344,18 +441,31 @@ onBeforeUnmount(() => {
               ></math-field>
             </template>
 
-            <button class="primary-btn" type="submit" :disabled="!canSubmit">
-              {{ submitting ? '提交中...' : '提交答案' }}
-            </button>
+            <div class="answer-actions" :class="{ 'has-next-action': answerCompleted }">
+              <button class="primary-btn answer-action-btn" type="submit" :disabled="!canSubmit">
+                {{ submitting ? '提交中...' : '提交答案' }}
+              </button>
+              <Transition name="next-button">
+                <button
+                  v-if="answerCompleted"
+                  class="secondary-btn answer-action-btn"
+                  type="button"
+                  :disabled="loadingQuestion"
+                  @click="handleNextQuestion"
+                >
+                  {{ loadingQuestion ? '加载中...' : '下一题' }}
+                </button>
+              </Transition>
+            </div>
           </form>
         </div>
-      </Transition>
+        </Transition>
 
-      <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
-      <p v-if="submitMessage" class="submit-message">{{ submitMessage }}</p>
-    </section>
+        <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
+        <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
+      </section>
 
-    <section class="panel extra-panel">
+      <section class="panel extra-panel">
       <h2>数据展示</h2>
       <div class="extra-actions">
         <button type="button" class="secondary-btn" @click="showMilestoneModal = true">查看里程碑</button>
@@ -365,7 +475,29 @@ onBeforeUnmount(() => {
         <h3>失败账号等级热力图</h3>
         <p>后端 WebSocket 字段：failedAccountLevelHeatmap</p>
       </div>
+      </section>
     </section>
+
+    <Transition name="fade-slide" @after-enter="renderAiAnswerMath">
+      <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
+        <div class="modal-heading">
+          <div>
+            <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
+            <h3>AI 解析</h3>
+          </div>
+          <button class="secondary-btn" type="button" @click="showAiAnswerPanel = false">收起解析</button>
+        </div>
+
+        <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
+        <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
+        <div
+          v-if="aiAnswerMessage"
+          ref="aiAnswerRenderRef"
+          class="markdown-body ai-answer-content"
+          v-html="renderedAiAnswer"
+        ></div>
+      </section>
+    </Transition>
 
     <div v-if="showMilestoneModal" class="modal-mask" @click.self="showMilestoneModal = false">
       <article class="modal-card">
@@ -382,6 +514,7 @@ onBeforeUnmount(() => {
         <button class="secondary-btn" @click="showFailModal = false">关闭</button>
       </article>
     </div>
+
 
     <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
       <article class="modal-card">

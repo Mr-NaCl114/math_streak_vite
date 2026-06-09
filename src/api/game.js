@@ -1,4 +1,5 @@
 const BASE_URL = 'https://lodsced.cloud'
+const AI_ANSWER_URL = 'http://127.0.0.1:10001/api/game/ai_answer/new_generate'
 
 async function requestJson(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
@@ -44,6 +45,27 @@ export function registerAccount(payload) {
     method: 'POST',
     body: JSON.stringify(payload)
   })
+}
+
+export async function fetchAiAnswer(payload) {
+  const response = await fetch(AI_ANSWER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+
+  if (!response.ok) {
+    throw new Error(`AI 解析请求失败：${response.status}`)
+  }
+
+  const json = await response.json()
+  if (json.code !== '0000') {
+    throw new Error(json.info || 'AI 解析业务请求失败')
+  }
+
+  return json.data
 }
 
 export const GAME_WS_URL = 'wss://lodsced.cloud/ws/game'

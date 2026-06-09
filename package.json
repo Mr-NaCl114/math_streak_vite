@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "katex": "^0.16.34",
+    "markdown-it": "^14.2.0",
+    "markdown-it-texmath": "^1.0.0",
     "mathlive": "^0.108.3",
     "vue": "^3.5.25"
   },
