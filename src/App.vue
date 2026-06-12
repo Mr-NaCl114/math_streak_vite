@@ -99,7 +99,10 @@ const canSubmit = computed(() => {
 })
 
 function normalizeQuestionText(value) {
-  return (value || '').replace(/\\n/g, '\n')
+  return (value || '')
+    .replace(/\\n/g, '\n')
+    // 将 ~\uline{...}~ 转换为 KaTeX 兼容的 $\underline{...}$
+    .replace(/~\\uline\{([^}]*)\}~/g, '$\\underline{$1}$')
 }
 
 function normalizeLooseMathBlocks(value) {
@@ -228,8 +231,8 @@ async function handleSubmit() {
       answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
     })
 
-    submitMessage.value = result.correct === 1
-      ? '回答正确，连胜继续！请手动进入下一题。'
+    submitMessage.value = result.isCorrect
+      ? '回答正确，连胜继续！'
       : result.correctLatexAnswer
         ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
         : '回答错误，参考答案：以后端返回为准'
