@@ -75,6 +75,12 @@ const gameStats = reactive({
 const milestoneList = ref([])
 const failedQuestionList = ref([])
 
+// Flip counter animation state
+const streakFlipping = ref(false)
+const maxStreakFlipping = ref(false)
+const lifeFlipping = ref(false)
+const streakShaking = ref(false)
+
 const markdownRenderer = new MarkdownIt({
   html: false,
   linkify: true,
@@ -284,6 +290,31 @@ function handleMathInput(event) {
 
 function applyStats(data) {
   if (!data) return
+
+  // Detect changes for flip animation (before applying new values)
+  const newStreak = data.totalStreak
+  const newMaxStreak = data.maxStreak
+  const newLife = data.life
+
+  if (newStreak !== undefined && newStreak !== gameStats.totalStreak) {
+    if (gameStats.totalStreak > 0 && newStreak === 0) {
+      streakShaking.value = true
+    }
+    streakFlipping.value = false
+    void document.body.offsetHeight
+    streakFlipping.value = true
+  }
+  if (newMaxStreak !== undefined && newMaxStreak !== gameStats.maxStreak) {
+    maxStreakFlipping.value = false
+    void document.body.offsetHeight
+    maxStreakFlipping.value = true
+  }
+  if (newLife !== undefined && newLife !== gameStats.life) {
+    lifeFlipping.value = false
+    void document.body.offsetHeight
+    lifeFlipping.value = true
+  }
+
   Object.assign(gameStats, data)
   if (data.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
   if (data.accuracy !== undefined) accountState.accuracy = data.accuracy
@@ -411,19 +442,41 @@ onBeforeUnmount(() => {
       <article class="stats-block life-block compact-card" :class="{ 'life-low-glow': isLifeLow }">
         <p class="stats-label">❤️ 生命值</p>
         <div class="life-inline">
-          <p class="stats-value">{{ gameStats.life }}/{{ gameStats.maxLife }}</p>
+          <p class="stats-value">
+            <span
+              class="flip-number"
+              :class="{ flipping: lifeFlipping }"
+              @animationend="lifeFlipping = false"
+            >{{ gameStats.life }}</span>/{{ gameStats.maxLife }}
+          </p>
           <div class="progress-track">
             <div class="progress-fill" :style="{ width: `${lifeProgress}%` }"></div>
           </div>
         </div>
       </article>
-      <article class="stats-block compact-card">
+      <article
+        class="stats-block compact-card"
+        :class="{ 'streak-shaking': streakShaking }"
+        @animationend="streakShaking = false"
+      >
         <p class="stats-label">🔥 当前连胜</p>
-        <p class="stats-value">{{ gameStats.totalStreak }}</p>
+        <p class="stats-value">
+          <span
+            class="flip-number"
+            :class="{ flipping: streakFlipping }"
+            @animationend="streakFlipping = false"
+          >{{ gameStats.totalStreak }}</span>
+        </p>
       </article>
       <article class="stats-block compact-card">
         <p class="stats-label">🏆 最大连胜</p>
-        <p class="stats-value">{{ gameStats.maxStreak }}</p>
+        <p class="stats-value">
+          <span
+            class="flip-number"
+            :class="{ flipping: maxStreakFlipping }"
+            @animationend="maxStreakFlipping = false"
+          >{{ gameStats.maxStreak }}</span>
+        </p>
       </article>
       <article class="stats-block compact-card">
         <p class="stats-label">📅 今日剩余次数</p>

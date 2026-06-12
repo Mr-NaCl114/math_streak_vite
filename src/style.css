@@ -424,6 +424,45 @@ button:hover { transform: translateY(-1px); }
   animation: blink-cursor 0.8s step-end infinite;
 }
 
+/* ---- Flip counter ---- */
+.flip-number {
+  display: inline-block;
+  transform-origin: center center;
+}
+
+.flip-number.flipping {
+  animation: flip-roll 1.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes flip-roll {
+  0%   { transform: rotateX(80deg); opacity: 0.2; }
+  35%  { transform: rotateX(-20deg); }
+  55%  { transform: rotateX(8deg); }
+  70%  { transform: rotateX(-4deg); }
+  85%  { transform: rotateX(2deg); }
+  100% { transform: rotateX(0deg); opacity: 1; }
+}
+
+/* ---- Streak shake (decaying amplitude) ---- */
+.streak-shaking {
+  animation: shake-decay 1s ease-out;
+}
+
+@keyframes shake-decay {
+  0%   { transform: translateX(0); }
+  6%   { transform: translateX(-16px); }
+  12%  { transform: translateX(14px); }
+  18%  { transform: translateX(-11px); }
+  24%  { transform: translateX(9px); }
+  30%  { transform: translateX(-6px); }
+  36%  { transform: translateX(4px); }
+  42%  { transform: translateX(-3px); }
+  48%  { transform: translateX(2px); }
+  54%  { transform: translateX(-1px); }
+  60%  { transform: translateX(0.5px); }
+  100% { transform: translateX(0); }
+}
+
 @media (max-width: 900px) {
   .content-grid { grid-template-columns: 1fr; }
   .question-heading { align-items: center; }
