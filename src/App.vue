@@ -399,8 +399,9 @@ onBeforeUnmount(() => {
     <section class="content-grid">
       <section class="panel question-panel">
         <div class="question-heading">
-          <div>
+          <div class="question-heading-left">
             <h2>当前题目</h2>
+            <span v-if="question" class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</span>
           </div>
           <Transition name="ai-button">
             <button
@@ -414,12 +415,10 @@ onBeforeUnmount(() => {
             </button>
           </Transition>
         </div>
-        <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
         <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
         <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
-          <p class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</p>
           <div class="question-description">{{ normalizeQuestionText(question.description) }}</div>
 
           <form class="answer-form" @submit.prevent="handleSubmit">
@@ -462,6 +461,7 @@ onBeforeUnmount(() => {
               </Transition>
             </div>
           </form>
+          <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
         </div>
         </Transition>
 

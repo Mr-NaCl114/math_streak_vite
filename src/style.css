@@ -134,9 +134,23 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .panel { padding: 16px; }
-.question-panel h2, .extra-panel h2 { margin-bottom: 10px; }
-.answering-count { margin-bottom: 8px; color: rgba(13, 18, 22, 0.76); font-size: 13px; }
-.question-meta { color: rgba(13, 18, 22, 0.7); margin-bottom: 8px; }
+.question-panel h2, .extra-panel h2 { margin-bottom: 0; }
+.question-heading-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.answering-count {
+  margin-top: 10px;
+  text-align: right;
+  color: rgba(13, 18, 22, 0.6);
+  font-size: 12px;
+}
+.question-meta {
+  color: rgba(13, 18, 22, 0.55);
+  font-size: 14px;
+  font-weight: 500;
+}
 .question-description { margin-bottom: 14px; white-space: pre-wrap; }
 .answer-form { display: flex; flex-direction: column; gap: 10px; }
 
