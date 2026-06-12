@@ -6,6 +6,7 @@ import MarkdownIt from 'markdown-it'
 import texmath from 'markdown-it-texmath'
 import 'markdown-it-texmath/css/texmath.css'
 import renderMathInElement from 'katex/contrib/auto-render'
+import { preprocessMath } from './utils/math-preprocessor'
 import { fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
 
 const loadingQuestion = ref(false)
@@ -98,30 +99,8 @@ const canSubmit = computed(() => {
   return Boolean(answerForm.latexAnswer.trim())
 })
 
-function normalizeQuestionText(value) {
-  return (value || '')
-    .replace(/\\n/g, '\n')
-    // 将 ~\uline{...}~ 转换为 KaTeX 兼容的 $\underline{...}$
-    .replace(/~\\uline\{([^}]*)\}~/g, '$\\underline{$1}$')
-    // 将 LaTeX textcomp 命令转换为 KaTeX 兼容命令
-    .replace(/\\textgreater/g, '\\gt')
-    .replace(/\\textless/g, '\\lt')
-}
-
-function normalizeLooseMathBlocks(value) {
-  return normalizeQuestionText(value)
-    .replace(
-      /(^|\n)[ \t]*\[[ \t]*\n([\s\S]*?)\n[ \t]*\](?=\n|$)/g,
-      '$1$$$$\n$2\n$$$$'
-    )
-    .replace(
-      /(^|\n)[ \t]*\[([^\n\]]*(?:\\[a-zA-Z]+|[=^_])[^\n\]]*)\][ \t]*(?=\n|$)/g,
-      '$1$$$$$2$$$$'
-    )
-}
-
-const renderedAiAnswer = computed(() => markdownRenderer.render(normalizeLooseMathBlocks(aiAnswerMessage.value)))
-const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(normalizeLooseMathBlocks(submitMessage.value)))
+const renderedAiAnswer = computed(() => markdownRenderer.render(preprocessMath(aiAnswerMessage.value)))
+const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(preprocessMath(submitMessage.value)))
 
 function resetAnswerInput() {
   answerForm.choice = ''
@@ -422,7 +401,7 @@ onBeforeUnmount(() => {
 
         <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
         <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
-          <div class="question-description">{{ normalizeQuestionText(question.description) }}</div>
+          <div class="question-description">{{ preprocessMath(question.description) }}</div>
 
           <form class="answer-form" @submit.prevent="handleSubmit">
             <template v-if="question.type === 1">
@@ -432,7 +411,7 @@ onBeforeUnmount(() => {
                 :key="item"
               >
                 <input v-model="answerForm.choice" type="radio" name="choice" :value="item" />
-                <span class="option-text">{{ item }}. {{ normalizeQuestionText(question[`opt${item}`]) }}</span>
+                <span class="option-text">{{ item }}. {{ preprocessMath(question[`opt${item}`]) }}</span>
               </label>
             </template>
 
