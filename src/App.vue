@@ -90,6 +90,8 @@ const lifeProgress = computed(() => {
   return Math.min(100, Math.round((gameStats.life / gameStats.maxLife) * 100))
 })
 
+const isLifeLow = computed(() => gameStats.life === 1)
+
 const canSubmit = computed(() => {
   if (!question.value || submitting.value || answerCompleted.value) return false
   if (question.value.type === 1) return Boolean(answerForm.choice)
@@ -368,7 +370,7 @@ onBeforeUnmount(() => {
     </header>
 
     <section class="stats-banner">
-      <article class="stats-block life-block compact-card">
+      <article class="stats-block life-block compact-card" :class="{ 'life-low-glow': isLifeLow }">
         <p class="stats-label">❤️ 生命值</p>
         <div class="life-inline">
           <p class="stats-value">{{ gameStats.life }}/{{ gameStats.maxLife }}</p>
@@ -388,7 +390,6 @@ onBeforeUnmount(() => {
       <article class="stats-block compact-card">
         <p class="stats-label">📅 今日剩余次数</p>
         <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
-        <p class="tip">WebSocket：{{ wsStatus }}</p>
       </article>
     </section>
 
@@ -473,7 +474,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="heatmap-placeholder">
         <h3>失败账号等级热力图</h3>
-        <p>后端 WebSocket 字段：failedAccountLevelHeatmap</p>
+        <p>failedAccountLevelHeatmap</p>
       </div>
       </section>
     </section>
