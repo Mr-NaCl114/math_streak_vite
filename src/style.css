@@ -162,10 +162,40 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid rgba(0, 149, 217, 0.25);
   border-radius: 8px;
   padding: 10px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .option:hover { background: #eaf6ff; }
+
+/* ---- Answer completed: lock & highlight ---- */
+.answer-completed .option {
+  cursor: default;
+  pointer-events: none;
+}
+
+.answer-completed .option:hover {
+  background: inherit;
+}
+
+.answer-completed .option-unselected {
+  border-color: rgba(0, 149, 217, 0.08);
+}
+
+.answer-completed .option-selected {
+  background: #d5efff;
+  border-color: #0095d9;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(0, 149, 217, 0.18), 0 2px 8px rgba(0, 149, 217, 0.12);
+  font-weight: 700;
+}
+
+.answer-completed .option-selected .option-text {
+  color: #005f8c;
+}
+
+.answer-completed .option input[type="radio"] {
+  accent-color: #0095d9;
+}
 
 .latex-label { font-weight: 600; }
 .latex-editor {

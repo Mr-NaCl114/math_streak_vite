@@ -509,14 +509,15 @@ onBeforeUnmount(() => {
         <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
           <div class="question-description">{{ preprocessMath(question.description) }}</div>
 
-          <form class="answer-form" @submit.prevent="handleSubmit">
+          <form class="answer-form" :class="{ 'answer-completed': answerCompleted }" @submit.prevent="handleSubmit">
             <template v-if="question.type === 1">
               <label
                 class="option"
+                :class="{ 'option-selected': answerCompleted && answerForm.choice === item, 'option-unselected': answerCompleted && answerForm.choice !== item }"
                 v-for="item in ['A', 'B', 'C', 'D']"
                 :key="item"
               >
-                <input v-model="answerForm.choice" type="radio" name="choice" :value="item" />
+                <input v-model="answerForm.choice" type="radio" name="choice" :value="item" :disabled="answerCompleted" />
                 <span class="option-text">{{ item }}. {{ preprocessMath(question[`opt${item}`]) }}</span>
               </label>
             </template>
