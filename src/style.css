@@ -409,6 +409,21 @@ button:hover { transform: translateY(-1px); }
   72%, 100% { transform: translateX(120%); }
 }
 
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: #0095d9;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 0.8s step-end infinite;
+}
+
 @media (max-width: 900px) {
   .content-grid { grid-template-columns: 1fr; }
   .question-heading { align-items: center; }

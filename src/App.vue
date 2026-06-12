@@ -19,6 +19,10 @@ const errorMessage = ref('')
 const submitMessage = ref('')
 const aiAnswerMessage = ref('')
 const aiAnswerError = ref('')
+const typewriterText = ref('')
+const typewriterActive = ref(false)
+let typewriterTimer = null
+let mathRenderTimer = null
 const wsStatus = ref('连接中')
 const showMilestoneModal = ref(false)
 const showFailModal = ref(false)
@@ -100,6 +104,10 @@ const canSubmit = computed(() => {
 })
 
 const renderedAiAnswer = computed(() => markdownRenderer.render(preprocessMath(aiAnswerMessage.value)))
+const renderedTypewriterText = computed(() => {
+  if (!typewriterText.value) return ''
+  return markdownRenderer.render(preprocessMath(typewriterText.value))
+})
 const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(preprocessMath(submitMessage.value)))
 
 function resetAnswerInput() {
@@ -109,6 +117,9 @@ function resetAnswerInput() {
   submitMessage.value = ''
   aiAnswerMessage.value = ''
   aiAnswerError.value = ''
+  stopTypewriter()
+  typewriterText.value = ''
+  typewriterActive.value = false
   showAiAnswerPanel.value = false
 }
 
@@ -140,6 +151,9 @@ async function requestAiAnswer() {
   showAiAnswerPanel.value = true
   loadingAiAnswer.value = true
   aiAnswerError.value = ''
+  stopTypewriter()
+  typewriterText.value = ''
+  typewriterActive.value = false
 
   try {
     const data = await fetchAiAnswer({
@@ -147,18 +161,56 @@ async function requestAiAnswer() {
       questionId: question.value.questionId
     })
     aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
-    await renderAiAnswerMath()
+    startTypewriter(aiAnswerMessage.value)
   } catch (error) {
     aiAnswerError.value = error.message || 'AI 解析加载失败'
-  } finally {
     loadingAiAnswer.value = false
   }
+}
+
+function startTypewriter(fullText) {
+  loadingAiAnswer.value = false
+  typewriterActive.value = true
+  let index = 0
+  const speed = 25
+
+  typewriterTimer = setInterval(() => {
+    if (index < fullText.length) {
+      // Batch several characters per tick for longer texts to feel snappy
+      const batchSize = fullText.length > 2000 ? 4 : fullText.length > 500 ? 2 : 1
+      index = Math.min(index + batchSize, fullText.length)
+      typewriterText.value = fullText.slice(0, index)
+    } else {
+      stopTypewriter()
+      nextTick(() => renderAiAnswerMath())
+    }
+  }, speed)
+
+  // Periodically render KaTeX math while typing
+  mathRenderTimer = setInterval(() => {
+    nextTick(() => renderAiAnswerMath())
+  }, 400)
+}
+
+function stopTypewriter() {
+  if (typewriterTimer) {
+    clearInterval(typewriterTimer)
+    typewriterTimer = null
+  }
+  if (mathRenderTimer) {
+    clearInterval(mathRenderTimer)
+    mathRenderTimer = null
+  }
+  typewriterActive.value = false
 }
 
 async function handleNextQuestion() {
   showAiAnswerPanel.value = false
   aiAnswerMessage.value = ''
   aiAnswerError.value = ''
+  stopTypewriter()
+  typewriterText.value = ''
+  typewriterActive.value = false
   await loadQuestion({ usePrefetch: true })
 }
 
@@ -329,6 +381,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (reconnectTimer.value) clearTimeout(reconnectTimer.value)
   if (wsClient) wsClient.close()
+  stopTypewriter()
 })
 </script>
 
@@ -464,7 +517,7 @@ onBeforeUnmount(() => {
       </section>
     </section>
 
-    <Transition name="fade-slide" @after-enter="renderAiAnswerMath">
+    <Transition name="fade-slide">
       <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
         <div class="modal-heading">
           <div>
@@ -480,8 +533,10 @@ onBeforeUnmount(() => {
           v-if="aiAnswerMessage"
           ref="aiAnswerRenderRef"
           class="markdown-body ai-answer-content"
-          v-html="renderedAiAnswer"
-        ></div>
+        >
+          <span v-html="renderedTypewriterText"></span>
+          <span v-if="typewriterActive" class="typewriter-cursor"></span>
+        </div>
       </section>
     </Transition>
 
