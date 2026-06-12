@@ -103,6 +103,9 @@ function normalizeQuestionText(value) {
     .replace(/\\n/g, '\n')
     // 将 ~\uline{...}~ 转换为 KaTeX 兼容的 $\underline{...}$
     .replace(/~\\uline\{([^}]*)\}~/g, '$\\underline{$1}$')
+    // 将 LaTeX textcomp 命令转换为 KaTeX 兼容命令
+    .replace(/\\textgreater/g, '\\gt')
+    .replace(/\\textless/g, '\\lt')
 }
 
 function normalizeLooseMathBlocks(value) {
