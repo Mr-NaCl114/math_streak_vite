@@ -1,5 +1,7 @@
 const BASE_URL = 'https://lodsced.cloud'
-const AI_ANSWER_URL = 'http://127.0.0.1:10001/api/game/ai_answer/new_generate'
+// const BASE_URL = 'http://127.0.0.1:10001'
+const AI_ANSWER_URL = 'https://lodsced.cloud/api/game/ai_answer/generate'
+// const AI_ANSWER_URL = 'http://127.0.0.1:10001/api/game/ai_answer/generate'
 
 async function requestJson(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
@@ -69,6 +71,7 @@ export async function fetchAiAnswer(payload) {
 }
 
 export const GAME_WS_URL = 'wss://lodsced.cloud/ws/game'
+// export const GAME_WS_URL = 'ws://127.0.0.1:10001/ws/game'
 
 // 以下接口为后续后端扩展预留
 export const RESERVED_ENDPOINTS = {
