@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="account-area">
-        <button class="secondary-btn" type="button" @click="toggleAuthPanel">
+        <button v-if="false" class="secondary-btn" type="button" @click="toggleAuthPanel">
           {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
         </button>
 
