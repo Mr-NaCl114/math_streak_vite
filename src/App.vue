@@ -550,12 +550,14 @@ onBeforeUnmount(() => {
               </Transition>
             </div>
           </form>
-          <p class="answering-count">当前题目正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
         </div>
         </Transition>
 
         <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
-        <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
+        <div class="question-footer">
+          <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
+          <p class="answering-count">正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
+        </div>
       </section>
 
       <section class="panel extra-panel">
