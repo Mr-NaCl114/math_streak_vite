@@ -187,7 +187,7 @@ h1, h2, h3, p { margin: 0; }
   border-color: rgba(0, 149, 217, 0.08);
 }
 
-.answer-completed .option-selected {
+.answer-completed .option-correct {
   background: #d5efff;
   border-color: #0095d9;
   border-width: 2px;
@@ -195,8 +195,20 @@ h1, h2, h3, p { margin: 0; }
   font-weight: 700;
 }
 
-.answer-completed .option-selected .option-text {
+.answer-completed .option-correct .option-text {
   color: #005f8c;
+}
+
+.answer-completed .option-wrong {
+  background: #ffe8e5;
+  border-color: #d92e00;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(217, 46, 0, 0.18), 0 2px 8px rgba(217, 46, 0, 0.12);
+  font-weight: 700;
+}
+
+.answer-completed .option-wrong .option-text {
+  color: #a82a00;
 }
 
 .answer-completed .option input[type="radio"] {

@@ -42,6 +42,8 @@ const answerForm = reactive({
   latexAnswer: ''
 })
 
+const correctChoice = ref('')
+
 const loginForm = reactive({
   account: '',
   password: ''
@@ -121,6 +123,7 @@ function resetAnswerInput() {
   answerForm.latexAnswer = ''
   answerCompleted.value = false
   submitMessage.value = ''
+  correctChoice.value = ''
   aiAnswerMessage.value = ''
   aiAnswerError.value = ''
   stopTypewriter()
@@ -271,6 +274,7 @@ async function handleSubmit() {
       answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
     })
 
+    correctChoice.value = question.value.type === 1 ? (result.correctLatexAnswer || '') : ''
     submitMessage.value = result.isCorrect
       ? '回答正确，连胜继续！'
       : result.correctLatexAnswer
@@ -513,7 +517,11 @@ onBeforeUnmount(() => {
             <template v-if="question.type === 1">
               <label
                 class="option"
-                :class="{ 'option-selected': answerCompleted && answerForm.choice === item, 'option-unselected': answerCompleted && answerForm.choice !== item }"
+                :class="{
+                  'option-correct': answerCompleted && correctChoice === item,
+                  'option-wrong': answerCompleted && answerForm.choice === item && correctChoice !== item,
+                  'option-unselected': answerCompleted && correctChoice !== item && answerForm.choice !== item
+                }"
                 v-for="item in ['A', 'B', 'C', 'D']"
                 :key="item"
               >
