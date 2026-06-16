@@ -25,7 +25,7 @@ async function requestJson(path, options = {}) {
 }
 
 export function fetchCurrentQuestion() {
-  return requestJson('/api/game/current-question')
+  return requestJson('/api/game/current_question')
 }
 
 export function submitAnswer(payload) {
