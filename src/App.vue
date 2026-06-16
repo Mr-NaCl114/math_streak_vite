@@ -85,6 +85,12 @@ const maxStreakFlipping = ref(false)
 const lifeFlipping = ref(false)
 const streakShaking = ref(false)
 
+// Title button easter egg state
+const titleClickCount = ref(0)
+let titleClickTimer = null
+const titleBounce = ref(false)
+const remainingCountShaking = ref(false)
+
 const markdownRenderer = new MarkdownIt({
   html: false,
   linkify: true,
@@ -423,6 +429,37 @@ function logout() {
   showAccountMenu.value = false
 }
 
+async function handleTitleClick() {
+  // Shrink animation
+  titleBounce.value = false
+  void document.body.offsetHeight
+  titleBounce.value = true
+
+  // Reset the gap timer
+  if (titleClickTimer) clearTimeout(titleClickTimer)
+
+  titleClickCount.value++
+  titleClickTimer = window.setTimeout(() => {
+    titleClickCount.value = 0
+  }, 1000)
+
+  if (titleClickCount.value >= 99) {
+    titleClickCount.value = 0
+    clearTimeout(titleClickTimer)
+    titleClickTimer = null
+
+    try {
+      const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', { method: 'POST' })
+      if (resp.ok) {
+        // WebSocket will push updated stats; apply streak shake to 今日剩余次数
+        remainingCountShaking.value = true
+      }
+    } catch {
+      // Silently fail - this is an easter egg
+    }
+  }
+}
+
 onMounted(async () => {
   await loadQuestion({ usePrefetch: false })
   connectWebsocket()
@@ -430,6 +467,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (reconnectTimer.value) clearTimeout(reconnectTimer.value)
+  if (titleClickTimer) clearTimeout(titleClickTimer)
   if (wsClient) wsClient.close()
   stopTypewriter()
 })
@@ -439,7 +477,12 @@ onBeforeUnmount(() => {
   <main class="page">
     <header class="arena-header">
       <div>
-        <h1>Math Streak Arena</h1>
+        <button
+          class="title-btn"
+          :class="{ 'title-bounce': titleBounce }"
+          @animationend="titleBounce = false"
+          @click="handleTitleClick"
+        >Math Streak Arena</button>
         <p>按连胜进阶难度，实时协同同场挑战。</p>
       </div>
 
@@ -497,7 +540,11 @@ onBeforeUnmount(() => {
           >{{ gameStats.maxStreak }}</span>
         </p>
       </article>
-      <article class="stats-block compact-card">
+      <article
+        class="stats-block compact-card"
+        :class="{ 'streak-shaking': remainingCountShaking }"
+        @animationend="remainingCountShaking = false"
+      >
         <p class="stats-label">📅 今日剩余次数</p>
         <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
       </article>
