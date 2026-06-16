@@ -74,6 +74,8 @@ const gameStats = reactive({
   failedAccountLevelHeatmap: []
 })
 
+const isTodayCompleted = computed(() => gameStats.accountTodayRemainingCount === 0)
+
 const milestoneList = ref([])
 const failedQuestionList = ref([])
 
@@ -225,6 +227,14 @@ async function handleNextQuestion() {
 
 
 async function loadQuestion({ usePrefetch = true } = {}) {
+  if (isTodayCompleted.value) {
+    question.value = null
+    prefetchedQuestion.value = null
+    resetAnswerInput()
+    loadingQuestion.value = false
+    return
+  }
+
   loadingQuestion.value = true
   errorMessage.value = ''
 
@@ -247,7 +257,7 @@ async function loadQuestion({ usePrefetch = true } = {}) {
 }
 
 async function prefetchNextQuestion() {
-  if (prefetching.value || prefetchedQuestion.value) return
+  if (isTodayCompleted.value || prefetching.value || prefetchedQuestion.value) return
   prefetching.value = true
   try {
     const incoming = await fetchCurrentQuestion()
@@ -337,7 +347,12 @@ function connectWebsocket() {
     try {
       const message = JSON.parse(event.data)
       if (message.code === '0000') {
+        const prevCount = gameStats.accountTodayRemainingCount
         applyStats(message.data)
+        // 监听今日剩余次数从 0 变为正整数时自动恢复答题
+        if (prevCount === 0 && gameStats.accountTodayRemainingCount > 0) {
+          loadQuestion({ usePrefetch: false })
+        }
         renderMathContent()
       }
     } catch {
@@ -489,15 +504,15 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="content-grid">
-      <section class="panel question-panel">
+      <section class="panel question-panel" :class="{ 'question-panel-completed': isTodayCompleted }">
         <div class="question-heading">
           <div class="question-heading-left">
-            <h2>当前题目</h2>
-            <span v-if="question" class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</span>
+            <h2>{{ isTodayCompleted ? '' : '当前题目' }}</h2>
+            <span v-if="question && !isTodayCompleted" class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</span>
           </div>
           <Transition name="ai-button">
             <button
-              v-if="answerCompleted"
+              v-if="answerCompleted && !isTodayCompleted"
               class="ai-analysis-btn"
               type="button"
               :disabled="loadingAiAnswer"
@@ -507,6 +522,14 @@ onBeforeUnmount(() => {
             </button>
           </Transition>
         </div>
+
+        <div v-if="isTodayCompleted" class="today-completed">
+          <span class="today-completed-emoji">📜</span>
+          <p class="today-completed-text">今日答题已完成</p>
+          <p class="today-completed-sub">请明日再来挑战，继续冲刺连胜！</p>
+        </div>
+
+        <template v-if="!isTodayCompleted">
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
         <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
@@ -566,6 +589,7 @@ onBeforeUnmount(() => {
           <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
           <p class="answering-count">正在答题人数：{{ gameStats.answeringCount }}</p>
         </div>
+        </template>
       </section>
 
       <section class="panel extra-panel">

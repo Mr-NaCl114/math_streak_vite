@@ -515,3 +515,37 @@ button:hover { transform: translateY(-1px); }
   .content-grid { grid-template-columns: 1fr; }
   .question-heading { align-items: center; }
 }
+
+/* ---- Today completed state ---- */
+.question-panel-completed {
+  background: linear-gradient(135deg, #fff0ed 0%, #ffe4e0 100%);
+  border-color: rgba(217, 46, 0, 0.35);
+  box-shadow: 0 8px 18px rgba(217, 46, 0, 0.12);
+}
+
+.today-completed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.today-completed-emoji {
+  font-size: 48px;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.today-completed-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 8px;
+}
+
+.today-completed-sub {
+  font-size: 13px;
+  color: rgba(192, 57, 43, 0.7);
+}
