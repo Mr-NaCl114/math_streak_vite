@@ -43,6 +43,7 @@ const answerForm = reactive({
 })
 
 const correctChoice = ref('')
+const currentQuestionSign = ref('')
 
 const loginForm = reactive({
   account: '',
@@ -133,6 +134,7 @@ function resetAnswerInput() {
   answerCompleted.value = false
   submitMessage.value = ''
   correctChoice.value = ''
+  currentQuestionSign.value = ''
   aiAnswerMessage.value = ''
   aiAnswerError.value = ''
   stopTypewriter()
@@ -176,7 +178,8 @@ async function requestAiAnswer() {
   try {
     const data = await fetchAiAnswer({
       type: question.value.type,
-      questionId: question.value.questionId
+      questionId: question.value.questionId,
+      sign: currentQuestionSign.value
     })
     aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
     startTypewriter(aiAnswerMessage.value)
@@ -291,6 +294,7 @@ async function handleSubmit() {
       answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
     })
 
+    currentQuestionSign.value = result.sign || ''
     correctChoice.value = question.value.type === 1 ? (result.correctLatexAnswer || '') : ''
     submitMessage.value = result.isCorrect
       ? '回答正确，连胜继续！'
