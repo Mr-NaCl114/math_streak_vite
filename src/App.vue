@@ -70,7 +70,7 @@ const gameStats = reactive({
   life: 0,
   maxLife: 1,
   accountTodayRemainingCount: 0,
-  currentQuestionAnsweringCount: 0,
+  answeringCount: 0,
   failedAccountLevelHeatmap: []
 })
 
@@ -564,7 +564,7 @@ onBeforeUnmount(() => {
         <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
         <div class="question-footer">
           <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
-          <p class="answering-count">正在答题人数：{{ gameStats.currentQuestionAnsweringCount }}</p>
+          <p class="answering-count">正在答题人数：{{ gameStats.answeringCount }}</p>
         </div>
       </section>
 
