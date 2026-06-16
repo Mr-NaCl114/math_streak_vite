@@ -260,6 +260,7 @@ button {
 }
 
 button:hover { transform: translateY(-1px); }
+.title-btn:hover { transform: none; }
 .primary-btn { background: #0095d9; color: #ffffff; }
 .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .secondary-btn { background: #8fd9f2; color: #0d1216; font-weight: 700; }

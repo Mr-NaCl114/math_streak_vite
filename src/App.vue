@@ -90,6 +90,7 @@ const titleClickCount = ref(0)
 let titleClickTimer = null
 const titleBounce = ref(false)
 const remainingCountShaking = ref(false)
+const titleEmoji = ref('')
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -451,8 +452,9 @@ async function handleTitleClick() {
     try {
       const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', { method: 'POST' })
       if (resp.ok) {
-        // WebSocket will push updated stats; apply streak shake to 今日剩余次数
         remainingCountShaking.value = true
+        const emojis = ['🎉', '✨', '🌟', '💫', '🔥', '🎯', '🏆', '💎', '⚡', '🍀', '🎲', '🃏', '👑', '🚀', '🌈']
+        titleEmoji.value = emojis[Math.floor(Math.random() * emojis.length)]
       }
     } catch {
       // Silently fail - this is an easter egg
@@ -482,7 +484,7 @@ onBeforeUnmount(() => {
           :class="{ 'title-bounce': titleBounce }"
           @animationend="titleBounce = false"
           @click="handleTitleClick"
-        >Math Streak Arena</button>
+        >Math Streak Arena{{ titleEmoji }}</button>
         <p>按连胜进阶难度，实时协同同场挑战。</p>
       </div>
 
