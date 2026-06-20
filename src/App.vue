@@ -1,5 +1,5 @@
 <script setup>
-import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef} from 'vue'
 import 'mathlive'
 import katex from 'katex'
 import MarkdownIt from 'markdown-it'
@@ -7,6 +7,9 @@ import texmath from 'markdown-it-texmath'
 import 'markdown-it-texmath/css/texmath.css'
 import renderMathInElement from 'katex/contrib/auto-render'
 import {preprocessMath} from './utils/math-preprocessor'
+import {useAnimationFlag} from './composables/useAnimationFlags'
+import {useTypewriter} from './composables/useTypewriter'
+import {createIdleScheduler, createRafScheduler} from './utils/scheduler'
 import {fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer} from './api/game'
 
 const loadingQuestion = ref(false)
@@ -19,10 +22,7 @@ const errorMessage = ref('')
 const submitMessage = ref('')
 const aiAnswerMessage = ref('')
 const aiAnswerError = ref('')
-const typewriterText = ref('')
-const typewriterActive = ref(false)
-let typewriterTimer = null
-let mathRenderTimer = null
+
 const wsStatus = ref('连接中')
 const showMilestoneModal = ref(false)
 const showFailModal = ref(false)
@@ -32,8 +32,8 @@ const authMessage = ref('')
 const showAccountMenu = ref(false)
 const reconnectTimer = ref(null)
 
-const question = ref(null)
-const prefetchedQuestion = ref(null)
+const question = shallowRef(null)
+const prefetchedQuestion = shallowRef(null)
 const questionRenderRef = ref(null)
 const aiAnswerRenderRef = ref(null)
 
@@ -81,16 +81,16 @@ const milestoneList = ref([])
 const failedQuestionList = ref([])
 
 // Flip counter animation state
-const streakFlipping = ref(false)
-const maxStreakFlipping = ref(false)
-const lifeFlipping = ref(false)
-const streakShaking = ref(false)
+const streakFlip = useAnimationFlag()
+const maxStreakFlip = useAnimationFlag()
+const lifeFlip = useAnimationFlag()
+const streakShake = useAnimationFlag()
 
 // Title button easter egg state
 const titleClickCount = ref(0)
 let titleClickTimer = null
-const titleBounce = ref(false)
-const remainingCountShaking = ref(false)
+const titleBounce = useAnimationFlag()
+const remainingCountShake = useAnimationFlag()
 const titleEmoji = ref('')
 
 const markdownRenderer = new MarkdownIt({
@@ -121,11 +121,8 @@ const canSubmit = computed(() => {
     return Boolean(answerForm.latexAnswer.trim())
 })
 
-const renderedAiAnswer = computed(() => markdownRenderer.render(preprocessMath(aiAnswerMessage.value)))
-const renderedTypewriterText = computed(() => {
-    if (!typewriterText.value) return ''
-    return markdownRenderer.render(preprocessMath(typewriterText.value))
-})
+const renderMarkdown = text => markdownRenderer.render(preprocessMath(text))
+const typewriter = useTypewriter(renderMarkdown)
 const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(preprocessMath(submitMessage.value)))
 
 function resetAnswerInput() {
@@ -137,9 +134,7 @@ function resetAnswerInput() {
     currentQuestionSign.value = ''
     aiAnswerMessage.value = ''
     aiAnswerError.value = ''
-    stopTypewriter()
-    typewriterText.value = ''
-    typewriterActive.value = false
+    typewriter.clear()
     showAiAnswerPanel.value = false
 }
 
@@ -165,15 +160,16 @@ async function renderAiAnswerMath() {
     renderMathInElement(aiAnswerRenderRef.value, mathRenderOptions)
 }
 
+const questionMathScheduler = createRafScheduler(renderMathContent)
+const aiAnswerMathScheduler = createIdleScheduler(renderAiAnswerMath)
+
 async function requestAiAnswer() {
     if (!question.value || loadingAiAnswer.value) return
 
     showAiAnswerPanel.value = true
     loadingAiAnswer.value = true
     aiAnswerError.value = ''
-    stopTypewriter()
-    typewriterText.value = ''
-    typewriterActive.value = false
+    typewriter.clear()
 
     try {
         const data = await fetchAiAnswer({
@@ -182,56 +178,20 @@ async function requestAiAnswer() {
             sign: currentQuestionSign.value
         })
         aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
-        startTypewriter(aiAnswerMessage.value)
+        loadingAiAnswer.value = false
+        typewriter.start(aiAnswerMessage.value)
+        aiAnswerMathScheduler.schedule()
     } catch (error) {
         aiAnswerError.value = error.message || 'AI 解析加载失败'
         loadingAiAnswer.value = false
     }
 }
 
-function startTypewriter(fullText) {
-    loadingAiAnswer.value = false
-    typewriterActive.value = true
-    let index = 0
-    const speed = 25
-
-    typewriterTimer = setInterval(() => {
-        if (index < fullText.length) {
-            // Batch several characters per tick for longer texts to feel snappy
-            const batchSize = fullText.length > 2000 ? 4 : fullText.length > 500 ? 2 : 1
-            index = Math.min(index + batchSize, fullText.length)
-            typewriterText.value = fullText.slice(0, index)
-        } else {
-            stopTypewriter()
-            nextTick(() => renderAiAnswerMath())
-        }
-    }, speed)
-
-    // Periodically render KaTeX math while typing
-    mathRenderTimer = setInterval(() => {
-        nextTick(() => renderAiAnswerMath())
-    }, 400)
-}
-
-function stopTypewriter() {
-    if (typewriterTimer) {
-        clearInterval(typewriterTimer)
-        typewriterTimer = null
-    }
-    if (mathRenderTimer) {
-        clearInterval(mathRenderTimer)
-        mathRenderTimer = null
-    }
-    typewriterActive.value = false
-}
-
 async function handleNextQuestion() {
     showAiAnswerPanel.value = false
     aiAnswerMessage.value = ''
     aiAnswerError.value = ''
-    stopTypewriter()
-    typewriterText.value = ''
-    typewriterActive.value = false
+    typewriter.clear()
     await loadQuestion({usePrefetch: true})
 }
 
@@ -323,21 +283,15 @@ function applyStats(data) {
 
     if (newStreak !== undefined && newStreak !== gameStats.totalStreak) {
         if (gameStats.totalStreak > 0 && newStreak === 0) {
-            streakShaking.value = true
+            streakShake.trigger()
         }
-        streakFlipping.value = false
-        void document.body.offsetHeight
-        streakFlipping.value = true
+        streakFlip.trigger()
     }
     if (newMaxStreak !== undefined && newMaxStreak !== gameStats.maxStreak) {
-        maxStreakFlipping.value = false
-        void document.body.offsetHeight
-        maxStreakFlipping.value = true
+        maxStreakFlip.trigger()
     }
     if (newLife !== undefined && newLife !== gameStats.life) {
-        lifeFlipping.value = false
-        void document.body.offsetHeight
-        lifeFlipping.value = true
+        lifeFlip.trigger()
     }
 
     Object.assign(gameStats, data)
@@ -364,7 +318,7 @@ function connectWebsocket() {
                 if (prevCount === 0 && gameStats.accountTodayRemainingCount > 0) {
                     loadQuestion({usePrefetch: false})
                 }
-                renderMathContent()
+                questionMathScheduler.schedule()
             }
         } catch {
             wsStatus.value = '消息解析失败'
@@ -436,9 +390,7 @@ function logout() {
 
 async function handleTitleClick() {
     // Shrink animation
-    titleBounce.value = false
-    void document.body.offsetHeight
-    titleBounce.value = true
+    titleBounce.trigger()
 
     // Reset the gap timer
     if (titleClickTimer) clearTimeout(titleClickTimer)
@@ -457,7 +409,7 @@ async function handleTitleClick() {
             // const resp = await fetch('https://lodsced.cloud/api/game/reset_count', { method: 'POST' })
             const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', {method: 'POST'})
             if (resp.ok) {
-                remainingCountShaking.value = true
+                remainingCountShake.trigger()
                 const emojis = ['🎉', '✨', '🌟', '💫', '🔥', '🎯', '🏆', '💎', '⚡', '🍀', '🎲', '🃏', '👑', '🚀', '🌈']
                 titleEmoji.value = emojis[Math.floor(Math.random() * emojis.length)]
             }
@@ -476,7 +428,15 @@ onBeforeUnmount(() => {
     if (reconnectTimer.value) clearTimeout(reconnectTimer.value)
     if (titleClickTimer) clearTimeout(titleClickTimer)
     if (wsClient) wsClient.close()
-    stopTypewriter()
+    typewriter.clear()
+    questionMathScheduler.cancel()
+    aiAnswerMathScheduler.cancel()
+    streakFlip.dispose()
+    maxStreakFlip.dispose()
+    lifeFlip.dispose()
+    streakShake.dispose()
+    titleBounce.dispose()
+    remainingCountShake.dispose()
 })
 </script>
 
@@ -485,9 +445,9 @@ onBeforeUnmount(() => {
         <header class="arena-header">
             <div>
                 <button
-                    :class="{ 'title-bounce': titleBounce }"
+                    :class="{ 'title-bounce': titleBounce.active.value }"
                     class="title-btn"
-                    @animationend="titleBounce = false"
+                    @animationend="titleBounce.reset"
                     @click="handleTitleClick"
                 >Math Streak Arena{{ titleEmoji }}
                 </button>
@@ -514,9 +474,9 @@ onBeforeUnmount(() => {
                 <div class="life-inline">
                     <p class="stats-value">
             <span
-                :class="{ flipping: lifeFlipping }"
+                :class="{ flipping: lifeFlip.active.value }"
                 class="flip-number"
-                @animationend="lifeFlipping = false"
+                @animationend="lifeFlip.reset"
             >{{ gameStats.life }}</span>/{{ gameStats.maxLife }}
                     </p>
                     <div class="progress-track">
@@ -525,16 +485,16 @@ onBeforeUnmount(() => {
                 </div>
             </article>
             <article
-                :class="{ 'streak-shaking': streakShaking }"
+                :class="{ 'streak-shaking': streakShake.active.value }"
                 class="stats-block compact-card"
-                @animationend="streakShaking = false"
+                @animationend="streakShake.reset"
             >
                 <p class="stats-label">🔥 当前连胜</p>
                 <p class="stats-value">
           <span
-              :class="{ flipping: streakFlipping }"
+              :class="{ flipping: streakFlip.active.value }"
               class="flip-number"
-              @animationend="streakFlipping = false"
+              @animationend="streakFlip.reset"
           >{{ gameStats.totalStreak }}</span>
                 </p>
             </article>
@@ -542,16 +502,16 @@ onBeforeUnmount(() => {
                 <p class="stats-label">🏆 最大连胜</p>
                 <p class="stats-value">
           <span
-              :class="{ flipping: maxStreakFlipping }"
+              :class="{ flipping: maxStreakFlip.active.value }"
               class="flip-number"
-              @animationend="maxStreakFlipping = false"
+              @animationend="maxStreakFlip.reset"
           >{{ gameStats.maxStreak }}</span>
                 </p>
             </article>
             <article
-                :class="{ 'streak-shaking': remainingCountShaking }"
+                :class="{ 'streak-shaking': remainingCountShake.active.value }"
                 class="stats-block compact-card"
-                @animationend="remainingCountShaking = false"
+                @animationend="remainingCountShake.reset"
             >
                 <p class="stats-label">📅 今日剩余次数</p>
                 <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
@@ -684,8 +644,8 @@ onBeforeUnmount(() => {
                     ref="aiAnswerRenderRef"
                     class="markdown-body ai-answer-content"
                 >
-                    <span v-html="renderedTypewriterText"></span>
-                    <span v-if="typewriterActive" class="typewriter-cursor"></span>
+                    <span v-html="typewriter.renderedText.value"></span>
+                    <span v-if="typewriter.active.value" class="typewriter-cursor"></span>
                 </div>
             </section>
         </Transition>

@@ -289,6 +289,29 @@ h1, h2, h3, p {
     font-size: 14px;
 }
 
+
+/* ---- Rendering isolation: reduce layout/paint invalidation blast radius ---- */
+.panel,
+.stats-block,
+.account-menu {
+    contain: layout paint;
+}
+
+.question-container,
+.ai-answer-content,
+.heatmap-placeholder {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 220px;
+}
+
+.progress-fill,
+.flip-number,
+.streak-shaking,
+.title-bounce,
+.ai-analysis-btn::after {
+    will-change: transform;
+}
+
 button {
     border: none;
     border-radius: 8px;
