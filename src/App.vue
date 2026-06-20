@@ -1,12 +1,7 @@
 <script setup>
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
-import 'mathlive'
-import katex from 'katex'
-import MarkdownIt from 'markdown-it'
-import texmath from 'markdown-it-texmath'
-import 'markdown-it-texmath/css/texmath.css'
-import renderMathInElement from 'katex/contrib/auto-render'
 import {preprocessMath} from './utils/math-preprocessor'
+import {cancelScheduledMathRender, ensureMathliveLoaded, renderMarkdown, scheduleMathRender} from './services/math-renderer'
 import {fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer} from './api/game'
 
 const loadingQuestion = ref(false)
@@ -21,8 +16,11 @@ const aiAnswerMessage = ref('')
 const aiAnswerError = ref('')
 const typewriterText = ref('')
 const typewriterActive = ref(false)
+const renderedTypewriterText = ref('')
+const renderedSubmitMessage = ref('')
 let typewriterTimer = null
-let mathRenderTimer = null
+let typewriterFrame = null
+let typewriterLastPaint = 0
 const wsStatus = ref('连接中')
 const showMilestoneModal = ref(false)
 const showFailModal = ref(false)
@@ -90,21 +88,9 @@ const streakShaking = ref(false)
 const titleClickCount = ref(0)
 let titleClickTimer = null
 const titleBounce = ref(false)
+const titleBounceKey = ref(0)
 const remainingCountShaking = ref(false)
 const titleEmoji = ref('')
-
-const markdownRenderer = new MarkdownIt({
-    html: false,
-    linkify: true,
-    breaks: true
-}).use(texmath, {
-    engine: katex,
-    delimiters: ['dollars', 'brackets', 'beg_end'],
-    katexOptions: {
-        throwOnError: false,
-        strict: false
-    }
-})
 
 let wsClient = null
 
@@ -121,48 +107,39 @@ const canSubmit = computed(() => {
     return Boolean(answerForm.latexAnswer.trim())
 })
 
-const renderedAiAnswer = computed(() => markdownRenderer.render(preprocessMath(aiAnswerMessage.value)))
-const renderedTypewriterText = computed(() => {
-    if (!typewriterText.value) return ''
-    return markdownRenderer.render(preprocessMath(typewriterText.value))
-})
-const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(preprocessMath(submitMessage.value)))
 
 function resetAnswerInput() {
     answerForm.choice = ''
     answerForm.latexAnswer = ''
     answerCompleted.value = false
     submitMessage.value = ''
+    renderedSubmitMessage.value = ''
     correctChoice.value = ''
     currentQuestionSign.value = ''
     aiAnswerMessage.value = ''
     aiAnswerError.value = ''
     stopTypewriter()
     typewriterText.value = ''
+    renderedTypewriterText.value = ''
     typewriterActive.value = false
     showAiAnswerPanel.value = false
 }
 
-const mathRenderOptions = {
-    delimiters: [
-        {left: '$$', right: '$$', display: true},
-        {left: '$', right: '$', display: false},
-        {left: '\\(', right: '\\)', display: false},
-        {left: '\\[', right: '\\]', display: true}
-    ],
-    throwOnError: false
-}
-
 async function renderMathContent() {
     await nextTick()
-    if (!questionRenderRef.value) return
-    renderMathInElement(questionRenderRef.value, mathRenderOptions)
+    scheduleMathRender(() => questionRenderRef.value)
 }
 
 async function renderAiAnswerMath() {
     await nextTick()
-    if (!aiAnswerRenderRef.value) return
-    renderMathInElement(aiAnswerRenderRef.value, mathRenderOptions)
+    scheduleMathRender(() => aiAnswerRenderRef.value)
+}
+
+async function paintTypewriter(force = false) {
+    if (!force && performance.now() - typewriterLastPaint < 80) return
+    typewriterLastPaint = performance.now()
+    renderedTypewriterText.value = await renderMarkdown(typewriterText.value)
+    renderAiAnswerMath()
 }
 
 async function requestAiAnswer() {
@@ -173,6 +150,7 @@ async function requestAiAnswer() {
     aiAnswerError.value = ''
     stopTypewriter()
     typewriterText.value = ''
+    renderedTypewriterText.value = ''
     typewriterActive.value = false
 
     try {
@@ -201,16 +179,17 @@ function startTypewriter(fullText) {
             const batchSize = fullText.length > 2000 ? 4 : fullText.length > 500 ? 2 : 1
             index = Math.min(index + batchSize, fullText.length)
             typewriterText.value = fullText.slice(0, index)
+            if (!typewriterFrame) {
+                typewriterFrame = requestAnimationFrame(async () => {
+                    typewriterFrame = null
+                    await paintTypewriter()
+                })
+            }
         } else {
             stopTypewriter()
-            nextTick(() => renderAiAnswerMath())
+            paintTypewriter(true)
         }
     }, speed)
-
-    // Periodically render KaTeX math while typing
-    mathRenderTimer = setInterval(() => {
-        nextTick(() => renderAiAnswerMath())
-    }, 400)
 }
 
 function stopTypewriter() {
@@ -218,9 +197,9 @@ function stopTypewriter() {
         clearInterval(typewriterTimer)
         typewriterTimer = null
     }
-    if (mathRenderTimer) {
-        clearInterval(mathRenderTimer)
-        mathRenderTimer = null
+    if (typewriterFrame) {
+        cancelAnimationFrame(typewriterFrame)
+        typewriterFrame = null
     }
     typewriterActive.value = false
 }
@@ -231,6 +210,7 @@ async function handleNextQuestion() {
     aiAnswerError.value = ''
     stopTypewriter()
     typewriterText.value = ''
+    renderedTypewriterText.value = ''
     typewriterActive.value = false
     await loadQuestion({usePrefetch: true})
 }
@@ -257,6 +237,7 @@ async function loadQuestion({usePrefetch = true} = {}) {
         }
 
         resetAnswerInput()
+        if (question.value?.type !== 1) await ensureMathliveLoaded()
         await renderMathContent()
         prefetchNextQuestion()
     } catch (error) {
@@ -301,6 +282,7 @@ async function handleSubmit() {
             : result.correctLatexAnswer
                 ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
                 : '回答错误，参考答案：以后端返回为准'
+        renderedSubmitMessage.value = await renderMarkdown(submitMessage.value, {inline: true})
         answerCompleted.value = true
     } catch (error) {
         submitMessage.value = error.message || '提交失败'
@@ -325,18 +307,12 @@ function applyStats(data) {
         if (gameStats.totalStreak > 0 && newStreak === 0) {
             streakShaking.value = true
         }
-        streakFlipping.value = false
-        void document.body.offsetHeight
         streakFlipping.value = true
     }
     if (newMaxStreak !== undefined && newMaxStreak !== gameStats.maxStreak) {
-        maxStreakFlipping.value = false
-        void document.body.offsetHeight
         maxStreakFlipping.value = true
     }
     if (newLife !== undefined && newLife !== gameStats.life) {
-        lifeFlipping.value = false
-        void document.body.offsetHeight
         lifeFlipping.value = true
     }
 
@@ -436,9 +412,8 @@ function logout() {
 
 async function handleTitleClick() {
     // Shrink animation
-    titleBounce.value = false
-    void document.body.offsetHeight
     titleBounce.value = true
+    titleBounceKey.value += 1
 
     // Reset the gap timer
     if (titleClickTimer) clearTimeout(titleClickTimer)
@@ -477,6 +452,7 @@ onBeforeUnmount(() => {
     if (titleClickTimer) clearTimeout(titleClickTimer)
     if (wsClient) wsClient.close()
     stopTypewriter()
+    cancelScheduledMathRender()
 })
 </script>
 
@@ -485,6 +461,7 @@ onBeforeUnmount(() => {
         <header class="arena-header">
             <div>
                 <button
+                    :key="titleBounceKey"
                     :class="{ 'title-bounce': titleBounce }"
                     class="title-btn"
                     @animationend="titleBounce = false"
