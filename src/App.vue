@@ -1,13 +1,13 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
 import 'mathlive'
 import katex from 'katex'
 import MarkdownIt from 'markdown-it'
 import texmath from 'markdown-it-texmath'
 import 'markdown-it-texmath/css/texmath.css'
 import renderMathInElement from 'katex/contrib/auto-render'
-import { preprocessMath } from './utils/math-preprocessor'
-import { fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer } from './api/game'
+import {preprocessMath} from './utils/math-preprocessor'
+import {fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer} from './api/game'
 
 const loadingQuestion = ref(false)
 const prefetching = ref(false)
@@ -38,41 +38,41 @@ const questionRenderRef = ref(null)
 const aiAnswerRenderRef = ref(null)
 
 const answerForm = reactive({
-  choice: '',
-  latexAnswer: ''
+    choice: '',
+    latexAnswer: ''
 })
 
 const correctChoice = ref('')
 const currentQuestionSign = ref('')
 
 const loginForm = reactive({
-  account: '',
-  password: ''
+    account: '',
+    password: ''
 })
 
 const registerForm = reactive({
-  account: '',
-  nickname: '',
-  password: ''
+    account: '',
+    nickname: '',
+    password: ''
 })
 
 const accountState = reactive({
-  loggedIn: false,
-  account: '',
-  nickname: '',
-  accountLevel: '--',
-  accuracy: '--',
-  historyQuestions: []
+    loggedIn: false,
+    account: '',
+    nickname: '',
+    accountLevel: '--',
+    accuracy: '--',
+    historyQuestions: []
 })
 
 const gameStats = reactive({
-  totalStreak: 0,
-  maxStreak: 0,
-  life: 0,
-  maxLife: 1,
-  accountTodayRemainingCount: 0,
-  answeringCount: 0,
-  failedAccountLevelHeatmap: []
+    totalStreak: 0,
+    maxStreak: 0,
+    life: 0,
+    maxLife: 1,
+    accountTodayRemainingCount: 0,
+    answeringCount: 0,
+    failedAccountLevelHeatmap: []
 })
 
 const isTodayCompleted = computed(() => gameStats.accountTodayRemainingCount === 0)
@@ -94,632 +94,642 @@ const remainingCountShaking = ref(false)
 const titleEmoji = ref('')
 
 const markdownRenderer = new MarkdownIt({
-  html: false,
-  linkify: true,
-  breaks: true
+    html: false,
+    linkify: true,
+    breaks: true
 }).use(texmath, {
-  engine: katex,
-  delimiters: ['dollars', 'brackets', 'beg_end'],
-  katexOptions: {
-    throwOnError: false,
-    strict: false
-  }
+    engine: katex,
+    delimiters: ['dollars', 'brackets', 'beg_end'],
+    katexOptions: {
+        throwOnError: false,
+        strict: false
+    }
 })
 
 let wsClient = null
 
 const lifeProgress = computed(() => {
-  if (!gameStats.maxLife) return 0
-  return Math.min(100, Math.round((gameStats.life / gameStats.maxLife) * 100))
+    if (!gameStats.maxLife) return 0
+    return Math.min(100, Math.round((gameStats.life / gameStats.maxLife) * 100))
 })
 
 const isLifeLow = computed(() => gameStats.life === 1)
 
 const canSubmit = computed(() => {
-  if (!question.value || submitting.value || answerCompleted.value) return false
-  if (question.value.type === 1) return Boolean(answerForm.choice)
-  return Boolean(answerForm.latexAnswer.trim())
+    if (!question.value || submitting.value || answerCompleted.value) return false
+    if (question.value.type === 1) return Boolean(answerForm.choice)
+    return Boolean(answerForm.latexAnswer.trim())
 })
 
 const renderedAiAnswer = computed(() => markdownRenderer.render(preprocessMath(aiAnswerMessage.value)))
 const renderedTypewriterText = computed(() => {
-  if (!typewriterText.value) return ''
-  return markdownRenderer.render(preprocessMath(typewriterText.value))
+    if (!typewriterText.value) return ''
+    return markdownRenderer.render(preprocessMath(typewriterText.value))
 })
 const renderedSubmitMessage = computed(() => markdownRenderer.renderInline(preprocessMath(submitMessage.value)))
 
 function resetAnswerInput() {
-  answerForm.choice = ''
-  answerForm.latexAnswer = ''
-  answerCompleted.value = false
-  submitMessage.value = ''
-  correctChoice.value = ''
-  currentQuestionSign.value = ''
-  aiAnswerMessage.value = ''
-  aiAnswerError.value = ''
-  stopTypewriter()
-  typewriterText.value = ''
-  typewriterActive.value = false
-  showAiAnswerPanel.value = false
+    answerForm.choice = ''
+    answerForm.latexAnswer = ''
+    answerCompleted.value = false
+    submitMessage.value = ''
+    correctChoice.value = ''
+    currentQuestionSign.value = ''
+    aiAnswerMessage.value = ''
+    aiAnswerError.value = ''
+    stopTypewriter()
+    typewriterText.value = ''
+    typewriterActive.value = false
+    showAiAnswerPanel.value = false
 }
 
 const mathRenderOptions = {
-  delimiters: [
-    { left: '$$', right: '$$', display: true },
-    { left: '$', right: '$', display: false },
-    { left: '\\(', right: '\\)', display: false },
-    { left: '\\[', right: '\\]', display: true }
-  ],
-  throwOnError: false
+    delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+    ],
+    throwOnError: false
 }
 
 async function renderMathContent() {
-  await nextTick()
-  if (!questionRenderRef.value) return
-  renderMathInElement(questionRenderRef.value, mathRenderOptions)
+    await nextTick()
+    if (!questionRenderRef.value) return
+    renderMathInElement(questionRenderRef.value, mathRenderOptions)
 }
 
 async function renderAiAnswerMath() {
-  await nextTick()
-  if (!aiAnswerRenderRef.value) return
-  renderMathInElement(aiAnswerRenderRef.value, mathRenderOptions)
+    await nextTick()
+    if (!aiAnswerRenderRef.value) return
+    renderMathInElement(aiAnswerRenderRef.value, mathRenderOptions)
 }
 
 async function requestAiAnswer() {
-  if (!question.value || loadingAiAnswer.value) return
+    if (!question.value || loadingAiAnswer.value) return
 
-  showAiAnswerPanel.value = true
-  loadingAiAnswer.value = true
-  aiAnswerError.value = ''
-  stopTypewriter()
-  typewriterText.value = ''
-  typewriterActive.value = false
+    showAiAnswerPanel.value = true
+    loadingAiAnswer.value = true
+    aiAnswerError.value = ''
+    stopTypewriter()
+    typewriterText.value = ''
+    typewriterActive.value = false
 
-  try {
-    const data = await fetchAiAnswer({
-      type: question.value.type,
-      questionId: question.value.questionId,
-      sign: currentQuestionSign.value
-    })
-    aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
-    startTypewriter(aiAnswerMessage.value)
-  } catch (error) {
-    aiAnswerError.value = error.message || 'AI 解析加载失败'
-    loadingAiAnswer.value = false
-  }
+    try {
+        const data = await fetchAiAnswer({
+            type: question.value.type,
+            questionId: question.value.questionId,
+            sign: currentQuestionSign.value
+        })
+        aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
+        startTypewriter(aiAnswerMessage.value)
+    } catch (error) {
+        aiAnswerError.value = error.message || 'AI 解析加载失败'
+        loadingAiAnswer.value = false
+    }
 }
 
 function startTypewriter(fullText) {
-  loadingAiAnswer.value = false
-  typewriterActive.value = true
-  let index = 0
-  const speed = 25
+    loadingAiAnswer.value = false
+    typewriterActive.value = true
+    let index = 0
+    const speed = 25
 
-  typewriterTimer = setInterval(() => {
-    if (index < fullText.length) {
-      // Batch several characters per tick for longer texts to feel snappy
-      const batchSize = fullText.length > 2000 ? 4 : fullText.length > 500 ? 2 : 1
-      index = Math.min(index + batchSize, fullText.length)
-      typewriterText.value = fullText.slice(0, index)
-    } else {
-      stopTypewriter()
-      nextTick(() => renderAiAnswerMath())
-    }
-  }, speed)
+    typewriterTimer = setInterval(() => {
+        if (index < fullText.length) {
+            // Batch several characters per tick for longer texts to feel snappy
+            const batchSize = fullText.length > 2000 ? 4 : fullText.length > 500 ? 2 : 1
+            index = Math.min(index + batchSize, fullText.length)
+            typewriterText.value = fullText.slice(0, index)
+        } else {
+            stopTypewriter()
+            nextTick(() => renderAiAnswerMath())
+        }
+    }, speed)
 
-  // Periodically render KaTeX math while typing
-  mathRenderTimer = setInterval(() => {
-    nextTick(() => renderAiAnswerMath())
-  }, 400)
+    // Periodically render KaTeX math while typing
+    mathRenderTimer = setInterval(() => {
+        nextTick(() => renderAiAnswerMath())
+    }, 400)
 }
 
 function stopTypewriter() {
-  if (typewriterTimer) {
-    clearInterval(typewriterTimer)
-    typewriterTimer = null
-  }
-  if (mathRenderTimer) {
-    clearInterval(mathRenderTimer)
-    mathRenderTimer = null
-  }
-  typewriterActive.value = false
+    if (typewriterTimer) {
+        clearInterval(typewriterTimer)
+        typewriterTimer = null
+    }
+    if (mathRenderTimer) {
+        clearInterval(mathRenderTimer)
+        mathRenderTimer = null
+    }
+    typewriterActive.value = false
 }
 
 async function handleNextQuestion() {
-  showAiAnswerPanel.value = false
-  aiAnswerMessage.value = ''
-  aiAnswerError.value = ''
-  stopTypewriter()
-  typewriterText.value = ''
-  typewriterActive.value = false
-  await loadQuestion({ usePrefetch: true })
+    showAiAnswerPanel.value = false
+    aiAnswerMessage.value = ''
+    aiAnswerError.value = ''
+    stopTypewriter()
+    typewriterText.value = ''
+    typewriterActive.value = false
+    await loadQuestion({usePrefetch: true})
 }
 
 
-async function loadQuestion({ usePrefetch = true } = {}) {
-  if (isTodayCompleted.value) {
-    question.value = null
-    prefetchedQuestion.value = null
-    resetAnswerInput()
-    loadingQuestion.value = false
-    return
-  }
-
-  loadingQuestion.value = true
-  errorMessage.value = ''
-
-  try {
-    if (usePrefetch && prefetchedQuestion.value && prefetchedQuestion.value.questionId !== question.value?.questionId) {
-      question.value = prefetchedQuestion.value
-      prefetchedQuestion.value = null
-    } else {
-      question.value = await fetchCurrentQuestion()
+async function loadQuestion({usePrefetch = true} = {}) {
+    if (isTodayCompleted.value) {
+        question.value = null
+        prefetchedQuestion.value = null
+        resetAnswerInput()
+        loadingQuestion.value = false
+        return
     }
 
-    resetAnswerInput()
-    await renderMathContent()
-    prefetchNextQuestion()
-  } catch (error) {
-    errorMessage.value = error.message || '题目加载失败'
-  } finally {
-    loadingQuestion.value = false
-  }
+    loadingQuestion.value = true
+    errorMessage.value = ''
+
+    try {
+        if (usePrefetch && prefetchedQuestion.value && prefetchedQuestion.value.questionId !== question.value?.questionId) {
+            question.value = prefetchedQuestion.value
+            prefetchedQuestion.value = null
+        } else {
+            question.value = await fetchCurrentQuestion()
+        }
+
+        resetAnswerInput()
+        await renderMathContent()
+        prefetchNextQuestion()
+    } catch (error) {
+        errorMessage.value = error.message || '题目加载失败'
+    } finally {
+        loadingQuestion.value = false
+    }
 }
 
 async function prefetchNextQuestion() {
-  if (isTodayCompleted.value || prefetching.value || prefetchedQuestion.value) return
-  prefetching.value = true
-  try {
-    const incoming = await fetchCurrentQuestion()
-    if (incoming?.questionId !== question.value?.questionId) {
-      prefetchedQuestion.value = incoming
+    if (isTodayCompleted.value || prefetching.value || prefetchedQuestion.value) return
+    prefetching.value = true
+    try {
+        const incoming = await fetchCurrentQuestion()
+        if (incoming?.questionId !== question.value?.questionId) {
+            prefetchedQuestion.value = incoming
+        }
+    } catch {
+        // 预取失败不阻塞主流程
+    } finally {
+        prefetching.value = false
     }
-  } catch {
-    // 预取失败不阻塞主流程
-  } finally {
-    prefetching.value = false
-  }
 }
 
 async function handleSubmit() {
-  if (!question.value) return
+    if (!question.value) return
 
-  submitting.value = true
-  submitMessage.value = ''
+    submitting.value = true
+    submitMessage.value = ''
 
-  try {
-    const result = await submitAnswer({
-      type: question.value.type,
-      questionId: question.value.questionId,
-      answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
-    })
+    try {
+        const result = await submitAnswer({
+            type: question.value.type,
+            questionId: question.value.questionId,
+            answerContent: question.value.type === 1 ? answerForm.choice : answerForm.latexAnswer
+        })
 
-    currentQuestionSign.value = result.sign || ''
-    correctChoice.value = question.value.type === 1 ? (result.correctLatexAnswer || '') : ''
-    submitMessage.value = result.isCorrect
-      ? '回答正确，连胜继续！'
-      : result.correctLatexAnswer
-        ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
-        : '回答错误，参考答案：以后端返回为准'
-    answerCompleted.value = true
-  } catch (error) {
-    submitMessage.value = error.message || '提交失败'
-  } finally {
-    submitting.value = false
-  }
+        currentQuestionSign.value = result.sign || ''
+        correctChoice.value = question.value.type === 1 ? (result.correctLatexAnswer || '') : ''
+        submitMessage.value = result.isCorrect
+            ? '回答正确，连胜继续！'
+            : result.correctLatexAnswer
+                ? `回答错误，参考答案：\\(${result.correctLatexAnswer}\\)`
+                : '回答错误，参考答案：以后端返回为准'
+        answerCompleted.value = true
+    } catch (error) {
+        submitMessage.value = error.message || '提交失败'
+    } finally {
+        submitting.value = false
+    }
 }
 
 function handleMathInput(event) {
-  answerForm.latexAnswer = event.target.value
+    answerForm.latexAnswer = event.target.value
 }
 
 function applyStats(data) {
-  if (!data) return
+    if (!data) return
 
-  // Detect changes for flip animation (before applying new values)
-  const newStreak = data.totalStreak
-  const newMaxStreak = data.maxStreak
-  const newLife = data.life
+    // Detect changes for flip animation (before applying new values)
+    const newStreak = data.totalStreak
+    const newMaxStreak = data.maxStreak
+    const newLife = data.life
 
-  if (newStreak !== undefined && newStreak !== gameStats.totalStreak) {
-    if (gameStats.totalStreak > 0 && newStreak === 0) {
-      streakShaking.value = true
+    if (newStreak !== undefined && newStreak !== gameStats.totalStreak) {
+        if (gameStats.totalStreak > 0 && newStreak === 0) {
+            streakShaking.value = true
+        }
+        streakFlipping.value = false
+        void document.body.offsetHeight
+        streakFlipping.value = true
     }
-    streakFlipping.value = false
-    void document.body.offsetHeight
-    streakFlipping.value = true
-  }
-  if (newMaxStreak !== undefined && newMaxStreak !== gameStats.maxStreak) {
-    maxStreakFlipping.value = false
-    void document.body.offsetHeight
-    maxStreakFlipping.value = true
-  }
-  if (newLife !== undefined && newLife !== gameStats.life) {
-    lifeFlipping.value = false
-    void document.body.offsetHeight
-    lifeFlipping.value = true
-  }
+    if (newMaxStreak !== undefined && newMaxStreak !== gameStats.maxStreak) {
+        maxStreakFlipping.value = false
+        void document.body.offsetHeight
+        maxStreakFlipping.value = true
+    }
+    if (newLife !== undefined && newLife !== gameStats.life) {
+        lifeFlipping.value = false
+        void document.body.offsetHeight
+        lifeFlipping.value = true
+    }
 
-  Object.assign(gameStats, data)
-  if (data.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
-  if (data.accuracy !== undefined) accountState.accuracy = data.accuracy
-  if (data.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions || []
+    Object.assign(gameStats, data)
+    if (data.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
+    if (data.accuracy !== undefined) accountState.accuracy = data.accuracy
+    if (data.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions || []
 }
 
 function connectWebsocket() {
-  wsStatus.value = '连接中'
-  wsClient = new WebSocket(GAME_WS_URL)
+    wsStatus.value = '连接中'
+    wsClient = new WebSocket(GAME_WS_URL)
 
-  wsClient.onopen = () => {
-    wsStatus.value = '已连接'
-  }
-
-  wsClient.onmessage = event => {
-    try {
-      const message = JSON.parse(event.data)
-      if (message.code === '0000') {
-        const prevCount = gameStats.accountTodayRemainingCount
-        applyStats(message.data)
-        // 监听今日剩余次数从 0 变为正整数时自动恢复答题
-        if (prevCount === 0 && gameStats.accountTodayRemainingCount > 0) {
-          loadQuestion({ usePrefetch: false })
-        }
-        renderMathContent()
-      }
-    } catch {
-      wsStatus.value = '消息解析失败'
+    wsClient.onopen = () => {
+        wsStatus.value = '已连接'
     }
-  }
 
-  wsClient.onerror = () => {
-    wsStatus.value = '连接异常'
-  }
+    wsClient.onmessage = event => {
+        try {
+            const message = JSON.parse(event.data)
+            if (message.code === '0000') {
+                const prevCount = gameStats.accountTodayRemainingCount
+                applyStats(message.data)
+                // 监听今日剩余次数从 0 变为正整数时自动恢复答题
+                if (prevCount === 0 && gameStats.accountTodayRemainingCount > 0) {
+                    loadQuestion({usePrefetch: false})
+                }
+                renderMathContent()
+            }
+        } catch {
+            wsStatus.value = '消息解析失败'
+        }
+    }
 
-  wsClient.onclose = () => {
-    wsStatus.value = '已断开，重连中'
-    reconnectTimer.value = window.setTimeout(connectWebsocket, 3000)
-  }
+    wsClient.onerror = () => {
+        wsStatus.value = '连接异常'
+    }
+
+    wsClient.onclose = () => {
+        wsStatus.value = '已断开，重连中'
+        reconnectTimer.value = window.setTimeout(connectWebsocket, 3000)
+    }
 }
 
 async function submitLogin() {
-  authMessage.value = ''
-  try {
-    const data = await loginAccount({
-      account: loginForm.account,
-      password: loginForm.password
-    })
-    accountState.loggedIn = true
-    accountState.account = data?.account || loginForm.account
-    accountState.nickname = data?.nickname || ''
-    if (data?.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
-    if (data?.accuracy !== undefined) accountState.accuracy = data.accuracy
-    if (data?.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions
-    showLoginModal.value = false
-  } catch (error) {
-    authMessage.value = error.message || '登录失败'
-  }
+    authMessage.value = ''
+    try {
+        const data = await loginAccount({
+            account: loginForm.account,
+            password: loginForm.password
+        })
+        accountState.loggedIn = true
+        accountState.account = data?.account || loginForm.account
+        accountState.nickname = data?.nickname || ''
+        if (data?.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
+        if (data?.accuracy !== undefined) accountState.accuracy = data.accuracy
+        if (data?.historyQuestions !== undefined) accountState.historyQuestions = data.historyQuestions
+        showLoginModal.value = false
+    } catch (error) {
+        authMessage.value = error.message || '登录失败'
+    }
 }
 
 async function submitRegister() {
-  authMessage.value = ''
-  try {
-    await registerAccount({
-      account: registerForm.account,
-      nickname: registerForm.nickname,
-      password: registerForm.password
-    })
-    authMode.value = 'login'
-    authMessage.value = '注册成功，请登录。'
-  } catch (error) {
-    authMessage.value = error.message || '注册失败'
-  }
+    authMessage.value = ''
+    try {
+        await registerAccount({
+            account: registerForm.account,
+            nickname: registerForm.nickname,
+            password: registerForm.password
+        })
+        authMode.value = 'login'
+        authMessage.value = '注册成功，请登录。'
+    } catch (error) {
+        authMessage.value = error.message || '注册失败'
+    }
 }
 
 function toggleAuthPanel() {
-  if (accountState.loggedIn) {
-    showAccountMenu.value = !showAccountMenu.value
-    return
-  }
-  showLoginModal.value = true
-  authMode.value = 'login'
+    if (accountState.loggedIn) {
+        showAccountMenu.value = !showAccountMenu.value
+        return
+    }
+    showLoginModal.value = true
+    authMode.value = 'login'
 }
 
 function logout() {
-  accountState.loggedIn = false
-  accountState.account = ''
-  accountState.nickname = ''
-  accountState.accountLevel = '--'
-  accountState.accuracy = '--'
-  accountState.historyQuestions = []
-  showAccountMenu.value = false
+    accountState.loggedIn = false
+    accountState.account = ''
+    accountState.nickname = ''
+    accountState.accountLevel = '--'
+    accountState.accuracy = '--'
+    accountState.historyQuestions = []
+    showAccountMenu.value = false
 }
 
 async function handleTitleClick() {
-  // Shrink animation
-  titleBounce.value = false
-  void document.body.offsetHeight
-  titleBounce.value = true
+    // Shrink animation
+    titleBounce.value = false
+    void document.body.offsetHeight
+    titleBounce.value = true
 
-  // Reset the gap timer
-  if (titleClickTimer) clearTimeout(titleClickTimer)
+    // Reset the gap timer
+    if (titleClickTimer) clearTimeout(titleClickTimer)
 
-  titleClickCount.value++
-  titleClickTimer = window.setTimeout(() => {
-    titleClickCount.value = 0
-  }, 1000)
+    titleClickCount.value++
+    titleClickTimer = window.setTimeout(() => {
+        titleClickCount.value = 0
+    }, 1000)
 
-  if (titleClickCount.value >= 99) {
-    titleClickCount.value = 0
-    clearTimeout(titleClickTimer)
-    titleClickTimer = null
+    if (titleClickCount.value >= 99) {
+        titleClickCount.value = 0
+        clearTimeout(titleClickTimer)
+        titleClickTimer = null
 
-    try {
-      const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', { method: 'POST' })
-      if (resp.ok) {
-        remainingCountShaking.value = true
-        const emojis = ['🎉', '✨', '🌟', '💫', '🔥', '🎯', '🏆', '💎', '⚡', '🍀', '🎲', '🃏', '👑', '🚀', '🌈']
-        titleEmoji.value = emojis[Math.floor(Math.random() * emojis.length)]
-      }
-    } catch {
-      // Silently fail - this is an easter egg
+        try {
+            // const resp = await fetch('https://lodsced.cloud/api/game/reset_count', { method: 'POST' })
+            const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', {method: 'POST'})
+            if (resp.ok) {
+                remainingCountShaking.value = true
+                const emojis = ['🎉', '✨', '🌟', '💫', '🔥', '🎯', '🏆', '💎', '⚡', '🍀', '🎲', '🃏', '👑', '🚀', '🌈']
+                titleEmoji.value = emojis[Math.floor(Math.random() * emojis.length)]
+            }
+        } catch {
+            // Silently fail - this is an easter egg
+        }
     }
-  }
 }
 
 onMounted(async () => {
-  await loadQuestion({ usePrefetch: false })
-  connectWebsocket()
+    await loadQuestion({usePrefetch: false})
+    connectWebsocket()
 })
 
 onBeforeUnmount(() => {
-  if (reconnectTimer.value) clearTimeout(reconnectTimer.value)
-  if (titleClickTimer) clearTimeout(titleClickTimer)
-  if (wsClient) wsClient.close()
-  stopTypewriter()
+    if (reconnectTimer.value) clearTimeout(reconnectTimer.value)
+    if (titleClickTimer) clearTimeout(titleClickTimer)
+    if (wsClient) wsClient.close()
+    stopTypewriter()
 })
 </script>
 
 <template>
-  <main class="page">
-    <header class="arena-header">
-      <div>
-        <button
-          class="title-btn"
-          :class="{ 'title-bounce': titleBounce }"
-          @animationend="titleBounce = false"
-          @click="handleTitleClick"
-        >Math Streak Arena{{ titleEmoji }}</button>
-        <p>按连胜进阶难度，实时协同同场挑战。</p>
-      </div>
+    <main class="page">
+        <header class="arena-header">
+            <div>
+                <button
+                    :class="{ 'title-bounce': titleBounce }"
+                    class="title-btn"
+                    @animationend="titleBounce = false"
+                    @click="handleTitleClick"
+                >Math Streak Arena{{ titleEmoji }}
+                </button>
+                <p>按连胜进阶难度，实时协同同场挑战。</p>
+            </div>
 
-      <div class="account-area">
-        <button v-if="false" class="secondary-btn" type="button" @click="toggleAuthPanel">
-          {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
-        </button>
+            <div class="account-area">
+                <button v-if="false" class="secondary-btn" type="button" @click="toggleAuthPanel">
+                    {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
+                </button>
 
-        <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
-          <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
-          <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
-          <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
-          <button class="secondary-btn" type="button" @click="logout">退出登录</button>
-        </article>
-      </div>
-    </header>
+                <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
+                    <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
+                    <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
+                    <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
+                    <button class="secondary-btn" type="button" @click="logout">退出登录</button>
+                </article>
+            </div>
+        </header>
 
-    <section class="stats-banner">
-      <article class="stats-block life-block compact-card" :class="{ 'life-low-glow': isLifeLow }">
-        <p class="stats-label">❤️ 生命值</p>
-        <div class="life-inline">
-          <p class="stats-value">
+        <section class="stats-banner">
+            <article :class="{ 'life-low-glow': isLifeLow }" class="stats-block life-block compact-card">
+                <p class="stats-label">❤️ 生命值</p>
+                <div class="life-inline">
+                    <p class="stats-value">
             <span
-              class="flip-number"
-              :class="{ flipping: lifeFlipping }"
-              @animationend="lifeFlipping = false"
+                :class="{ flipping: lifeFlipping }"
+                class="flip-number"
+                @animationend="lifeFlipping = false"
             >{{ gameStats.life }}</span>/{{ gameStats.maxLife }}
-          </p>
-          <div class="progress-track">
-            <div class="progress-fill" :style="{ width: `${lifeProgress}%` }"></div>
-          </div>
-        </div>
-      </article>
-      <article
-        class="stats-block compact-card"
-        :class="{ 'streak-shaking': streakShaking }"
-        @animationend="streakShaking = false"
-      >
-        <p class="stats-label">🔥 当前连胜</p>
-        <p class="stats-value">
-          <span
-            class="flip-number"
-            :class="{ flipping: streakFlipping }"
-            @animationend="streakFlipping = false"
-          >{{ gameStats.totalStreak }}</span>
-        </p>
-      </article>
-      <article class="stats-block compact-card">
-        <p class="stats-label">🏆 最大连胜</p>
-        <p class="stats-value">
-          <span
-            class="flip-number"
-            :class="{ flipping: maxStreakFlipping }"
-            @animationend="maxStreakFlipping = false"
-          >{{ gameStats.maxStreak }}</span>
-        </p>
-      </article>
-      <article
-        class="stats-block compact-card"
-        :class="{ 'streak-shaking': remainingCountShaking }"
-        @animationend="remainingCountShaking = false"
-      >
-        <p class="stats-label">📅 今日剩余次数</p>
-        <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
-      </article>
-    </section>
-
-    <section class="content-grid">
-      <section class="panel question-panel" :class="{ 'question-panel-completed': isTodayCompleted }">
-        <div class="question-heading">
-          <div class="question-heading-left">
-            <h2>{{ isTodayCompleted ? '' : '当前题目' }}</h2>
-            <span v-if="question && !isTodayCompleted" class="question-meta">题号 #{{ question.questionId }} · 难度 {{ question.difficultyLevel }}</span>
-          </div>
-          <Transition name="ai-button">
-            <button
-              v-if="answerCompleted && !isTodayCompleted"
-              class="ai-analysis-btn"
-              type="button"
-              :disabled="loadingAiAnswer"
-              @click="requestAiAnswer"
+                    </p>
+                    <div class="progress-track">
+                        <div :style="{ width: `${lifeProgress}%` }" class="progress-fill"></div>
+                    </div>
+                </div>
+            </article>
+            <article
+                :class="{ 'streak-shaking': streakShaking }"
+                class="stats-block compact-card"
+                @animationend="streakShaking = false"
             >
-              {{ loadingAiAnswer ? '解析中...' : 'AI解析' }}
-            </button>
-          </Transition>
-        </div>
+                <p class="stats-label">🔥 当前连胜</p>
+                <p class="stats-value">
+          <span
+              :class="{ flipping: streakFlipping }"
+              class="flip-number"
+              @animationend="streakFlipping = false"
+          >{{ gameStats.totalStreak }}</span>
+                </p>
+            </article>
+            <article class="stats-block compact-card">
+                <p class="stats-label">🏆 最大连胜</p>
+                <p class="stats-value">
+          <span
+              :class="{ flipping: maxStreakFlipping }"
+              class="flip-number"
+              @animationend="maxStreakFlipping = false"
+          >{{ gameStats.maxStreak }}</span>
+                </p>
+            </article>
+            <article
+                :class="{ 'streak-shaking': remainingCountShaking }"
+                class="stats-block compact-card"
+                @animationend="remainingCountShaking = false"
+            >
+                <p class="stats-label">📅 今日剩余次数</p>
+                <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
+            </article>
+        </section>
 
-        <div v-if="isTodayCompleted" class="today-completed">
-          <span class="today-completed-emoji">📜</span>
-          <p class="today-completed-text">今日答题已完成</p>
-          <p class="today-completed-sub">请明日再来挑战，继续冲刺连胜！</p>
-        </div>
+        <section class="content-grid">
+            <section :class="{ 'question-panel-completed': isTodayCompleted }" class="panel question-panel">
+                <div class="question-heading">
+                    <div class="question-heading-left">
+                        <h2>{{ isTodayCompleted ? '' : '当前题目' }}</h2>
+                        <span v-if="question && !isTodayCompleted" class="question-meta">题号 #{{ question.questionId }} · 难度 {{
+                                question.difficultyLevel
+                            }}</span>
+                    </div>
+                    <Transition name="ai-button">
+                        <button
+                            v-if="answerCompleted && !isTodayCompleted"
+                            :disabled="loadingAiAnswer"
+                            class="ai-analysis-btn"
+                            type="button"
+                            @click="requestAiAnswer"
+                        >
+                            {{ loadingAiAnswer ? '解析中...' : 'AI解析' }}
+                        </button>
+                    </Transition>
+                </div>
 
-        <template v-if="!isTodayCompleted">
-        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+                <div v-if="isTodayCompleted" class="today-completed">
+                    <span class="today-completed-emoji">📜</span>
+                    <p class="today-completed-text">今日答题已完成</p>
+                    <p class="today-completed-sub">请明日再来挑战，继续冲刺连胜！</p>
+                </div>
 
-        <Transition name="fade-slide" mode="out-in" @after-enter="renderMathContent">
-        <div v-if="question" :key="question.questionId" class="question-container" ref="questionRenderRef">
-          <div class="question-description">{{ preprocessMath(question.description) }}</div>
+                <template v-if="!isTodayCompleted">
+                    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
-          <form class="answer-form" :class="{ 'answer-completed': answerCompleted }" @submit.prevent="handleSubmit">
-            <template v-if="question.type === 1">
-              <label
-                class="option"
-                :class="{
+                    <Transition mode="out-in" name="fade-slide" @after-enter="renderMathContent">
+                        <div v-if="question" :key="question.questionId" ref="questionRenderRef"
+                             class="question-container">
+                            <div class="question-description">{{ preprocessMath(question.description) }}</div>
+
+                            <form :class="{ 'answer-completed': answerCompleted }" class="answer-form"
+                                  @submit.prevent="handleSubmit">
+                                <template v-if="question.type === 1">
+                                    <label
+                                        v-for="item in ['A', 'B', 'C', 'D']"
+                                        :key="item"
+                                        :class="{
                   'option-correct': answerCompleted && correctChoice === item,
                   'option-wrong': answerCompleted && answerForm.choice === item && correctChoice !== item,
                   'option-unselected': answerCompleted && correctChoice !== item && answerForm.choice !== item
                 }"
-                v-for="item in ['A', 'B', 'C', 'D']"
-                :key="item"
-              >
-                <input v-model="answerForm.choice" type="radio" name="choice" :value="item" :disabled="answerCompleted" />
-                <span class="option-text">{{ item }}. {{ preprocessMath(question[`opt${item}`]) }}</span>
-              </label>
-            </template>
+                                        class="option"
+                                    >
+                                        <input v-model="answerForm.choice" :disabled="answerCompleted" :value="item" name="choice"
+                                               type="radio"/>
+                                        <span class="option-text">{{ item }}. {{
+                                                preprocessMath(question[`opt${item}`])
+                                            }}</span>
+                                    </label>
+                                </template>
 
-            <template v-else>
-              <label class="latex-label" for="latex-input">LaTeX 填空答案</label>
-              <math-field
-                id="latex-input"
-                class="latex-editor"
-                virtual-keyboard-mode="onfocus"
-                :value="answerForm.latexAnswer"
-                @input="handleMathInput"
-              ></math-field>
-            </template>
+                                <template v-else>
+                                    <label class="latex-label" for="latex-input">LaTeX 填空答案</label>
+                                    <math-field
+                                        id="latex-input"
+                                        :value="answerForm.latexAnswer"
+                                        class="latex-editor"
+                                        virtual-keyboard-mode="onfocus"
+                                        @input="handleMathInput"
+                                    ></math-field>
+                                </template>
 
-            <div class="answer-actions" :class="{ 'has-next-action': answerCompleted }">
-              <button class="primary-btn answer-action-btn" type="submit" :disabled="!canSubmit">
-                {{ submitting ? '提交中...' : '提交答案' }}
-              </button>
-              <Transition name="next-button">
-                <button
-                  v-if="answerCompleted"
-                  class="secondary-btn answer-action-btn"
-                  type="button"
-                  :disabled="loadingQuestion"
-                  @click="handleNextQuestion"
+                                <div :class="{ 'has-next-action': answerCompleted }" class="answer-actions">
+                                    <button :disabled="!canSubmit" class="primary-btn answer-action-btn" type="submit">
+                                        {{ submitting ? '提交中...' : '提交答案' }}
+                                    </button>
+                                    <Transition name="next-button">
+                                        <button
+                                            v-if="answerCompleted"
+                                            :disabled="loadingQuestion"
+                                            class="secondary-btn answer-action-btn"
+                                            type="button"
+                                            @click="handleNextQuestion"
+                                        >
+                                            {{ loadingQuestion ? '加载中...' : '下一题' }}
+                                        </button>
+                                    </Transition>
+                                </div>
+                            </form>
+                        </div>
+                    </Transition>
+
+                    <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
+                    <div class="question-footer">
+                        <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
+                        <p class="answering-count">正在答题人数：{{ gameStats.answeringCount }}</p>
+                    </div>
+                </template>
+            </section>
+
+            <section class="panel extra-panel">
+                <h2>数据展示</h2>
+                <div class="extra-actions">
+                    <button class="secondary-btn" type="button" @click="showMilestoneModal = true">查看里程碑</button>
+                    <button class="secondary-btn" type="button" @click="showFailModal = true">查看连胜中断题目</button>
+                </div>
+                <div class="heatmap-placeholder">
+                    <h3>失败账号等级热力图</h3>
+                    <p>failedAccountLevelHeatmap</p>
+                </div>
+            </section>
+        </section>
+
+        <Transition name="fade-slide">
+            <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
+                <div class="modal-heading">
+                    <div>
+                        <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
+                        <h3>AI 解析</h3>
+                    </div>
+                    <button class="secondary-btn" type="button" @click="showAiAnswerPanel = false">收起解析</button>
+                </div>
+
+                <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
+                <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
+                <div
+                    v-if="aiAnswerMessage"
+                    ref="aiAnswerRenderRef"
+                    class="markdown-body ai-answer-content"
                 >
-                  {{ loadingQuestion ? '加载中...' : '下一题' }}
-                </button>
-              </Transition>
-            </div>
-          </form>
-        </div>
+                    <span v-html="renderedTypewriterText"></span>
+                    <span v-if="typewriterActive" class="typewriter-cursor"></span>
+                </div>
+            </section>
         </Transition>
 
-        <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
-        <div class="question-footer">
-          <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
-          <p class="answering-count">正在答题人数：{{ gameStats.answeringCount }}</p>
-        </div>
-        </template>
-      </section>
-
-      <section class="panel extra-panel">
-      <h2>数据展示</h2>
-      <div class="extra-actions">
-        <button type="button" class="secondary-btn" @click="showMilestoneModal = true">查看里程碑</button>
-        <button type="button" class="secondary-btn" @click="showFailModal = true">查看连胜中断题目</button>
-      </div>
-      <div class="heatmap-placeholder">
-        <h3>失败账号等级热力图</h3>
-        <p>failedAccountLevelHeatmap</p>
-      </div>
-      </section>
-    </section>
-
-    <Transition name="fade-slide">
-      <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
-        <div class="modal-heading">
-          <div>
-            <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
-            <h3>AI 解析</h3>
-          </div>
-          <button class="secondary-btn" type="button" @click="showAiAnswerPanel = false">收起解析</button>
+        <div v-if="showMilestoneModal" class="modal-mask" @click.self="showMilestoneModal = false">
+            <article class="modal-card">
+                <h3>最大连胜里程碑</h3>
+                <p v-if="milestoneList.length === 0">暂无后端返回数据。</p>
+                <button class="secondary-btn" @click="showMilestoneModal = false">关闭</button>
+            </article>
         </div>
 
-        <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
-        <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
-        <div
-          v-if="aiAnswerMessage"
-          ref="aiAnswerRenderRef"
-          class="markdown-body ai-answer-content"
-        >
-          <span v-html="renderedTypewriterText"></span>
-          <span v-if="typewriterActive" class="typewriter-cursor"></span>
-        </div>
-      </section>
-    </Transition>
-
-    <div v-if="showMilestoneModal" class="modal-mask" @click.self="showMilestoneModal = false">
-      <article class="modal-card">
-        <h3>最大连胜里程碑</h3>
-        <p v-if="milestoneList.length === 0">暂无后端返回数据。</p>
-        <button class="secondary-btn" @click="showMilestoneModal = false">关闭</button>
-      </article>
-    </div>
-
-    <div v-if="showFailModal" class="modal-mask" @click.self="showFailModal = false">
-      <article class="modal-card">
-        <h3>连胜中断题目</h3>
-        <p v-if="failedQuestionList.length === 0">暂无后端返回数据。</p>
-        <button class="secondary-btn" @click="showFailModal = false">关闭</button>
-      </article>
-    </div>
-
-
-    <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
-      <article class="modal-card">
-        <div class="auth-tabs">
-          <button class="secondary-btn" type="button" @click="authMode = 'login'">登录</button>
-          <button class="secondary-btn" type="button" @click="authMode = 'register'">注册</button>
+        <div v-if="showFailModal" class="modal-mask" @click.self="showFailModal = false">
+            <article class="modal-card">
+                <h3>连胜中断题目</h3>
+                <p v-if="failedQuestionList.length === 0">暂无后端返回数据。</p>
+                <button class="secondary-btn" @click="showFailModal = false">关闭</button>
+            </article>
         </div>
 
-        <form v-if="authMode === 'login'" class="answer-form" @submit.prevent="submitLogin">
-          <input v-model="loginForm.account" class="auth-input" type="text" placeholder="账号" required />
-          <input v-model="loginForm.password" class="auth-input" type="password" placeholder="密码" required />
-          <button class="primary-btn" type="submit">登录</button>
-        </form>
 
-        <form v-else class="answer-form" @submit.prevent="submitRegister">
-          <input v-model="registerForm.account" class="auth-input" type="text" placeholder="账号" required />
-          <input v-model="registerForm.nickname" class="auth-input" type="text" placeholder="昵称" required />
-          <input v-model="registerForm.password" class="auth-input" type="password" placeholder="密码" required />
-          <button class="primary-btn" type="submit">注册</button>
-        </form>
+        <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
+            <article class="modal-card">
+                <div class="auth-tabs">
+                    <button class="secondary-btn" type="button" @click="authMode = 'login'">登录</button>
+                    <button class="secondary-btn" type="button" @click="authMode = 'register'">注册</button>
+                </div>
 
-        <p v-if="authMessage" class="submit-message">{{ authMessage }}</p>
-      </article>
-    </div>
-  </main>
+                <form v-if="authMode === 'login'" class="answer-form" @submit.prevent="submitLogin">
+                    <input v-model="loginForm.account" class="auth-input" placeholder="账号" required type="text"/>
+                    <input v-model="loginForm.password" class="auth-input" placeholder="密码" required type="password"/>
+                    <button class="primary-btn" type="submit">登录</button>
+                </form>
+
+                <form v-else class="answer-form" @submit.prevent="submitRegister">
+                    <input v-model="registerForm.account" class="auth-input" placeholder="账号" required type="text"/>
+                    <input v-model="registerForm.nickname" class="auth-input" placeholder="昵称" required type="text"/>
+                    <input v-model="registerForm.password" class="auth-input" placeholder="密码" required
+                           type="password"/>
+                    <button class="primary-btn" type="submit">注册</button>
+                </form>
+
+                <p v-if="authMessage" class="submit-message">{{ authMessage }}</p>
+            </article>
+        </div>
+    </main>
 </template>

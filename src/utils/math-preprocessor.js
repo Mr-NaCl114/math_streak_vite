@@ -17,18 +17,18 @@
 // textcomp → KaTeX 命令映射表
 // ---------------------------------------------------------------------------
 const TEXTCOMP_MAP = [
-  ['\\textgreater',      '\\gt'],
-  ['\\textless',         '\\lt'],
-  ['\\textbar',          '|'],
-  ['\\textbackslash',    '\\backslash'],
-  ['\\textasciicircum',  '\\^{}'],
-  ['\\textasciitilde',   '\\sim'],
-  ['\\textunderscore',   '\\_'],
-  ['\\textbraceleft',    '\\{'],
-  ['\\textbraceright',   '\\}'],
-  ['\\textdollar',       '\\$'],
-  ['\\textpercent',      '\\%'],
-  ['\\textampersand',    '\\&'],
+    ['\\textgreater', '\\gt'],
+    ['\\textless', '\\lt'],
+    ['\\textbar', '|'],
+    ['\\textbackslash', '\\backslash'],
+    ['\\textasciicircum', '\\^{}'],
+    ['\\textasciitilde', '\\sim'],
+    ['\\textunderscore', '\\_'],
+    ['\\textbraceleft', '\\{'],
+    ['\\textbraceright', '\\}'],
+    ['\\textdollar', '\\$'],
+    ['\\textpercent', '\\%'],
+    ['\\textampersand', '\\&'],
 ]
 
 // ---------------------------------------------------------------------------
@@ -41,38 +41,38 @@ const TEXTCOMP_MAP = [
  * @returns {string} 预处理后的文本
  */
 export function preprocessMath(raw) {
-  if (!raw) return ''
+    if (!raw) return ''
 
-  let text = raw
+    let text = raw
 
-  // 1) 转义换行符
-  text = text.replace(/\\n/g, '\n')
+    // 1) 转义换行符
+    text = text.replace(/\\n/g, '\n')
 
-  // 2) Asymptote 图表块 → 文本占位（KaTeX 无法渲染 Asymptote）
-  text = text.replace(/\[asy\][\s\S]*?\[\/asy\]/gi, '[图表]')
+    // 2) Asymptote 图表块 → 文本占位（KaTeX 无法渲染 Asymptote）
+    text = text.replace(/\[asy\][\s\S]*?\[\/asy\]/gi, '[图表]')
 
-  // 3) 自定义下划线填空 ~\uline{...}~ → $\underline{...}$
-  text = text.replace(/~\\uline\{([^}]*)\}~/g, '$\\underline{$1}$')
+    // 3) 自定义下划线填空 ~\uline{...}~ → $\underline{...}$
+    text = text.replace(/~\\uline\{([^}]*)\}~/g, '$\\underline{$1}$')
 
-  // 4) LaTeX textcomp 命令 → KaTeX 等效命令
-  for (const [from, to] of TEXTCOMP_MAP) {
-    // 用 split+join 代替 replace 避免正则中特殊字符双重转义
-    text = text.split(from).join(to)
-  }
+    // 4) LaTeX textcomp 命令 → KaTeX 等效命令
+    for (const [from, to] of TEXTCOMP_MAP) {
+        // 用 split+join 代替 replace 避免正则中特殊字符双重转义
+        text = text.split(from).join(to)
+    }
 
-  // 5) 松散数学块 [...] → $$...$$（向后兼容旧后端格式）
-  //    多行块：[ ... \n 内容 \n ... ]
-  // 块公式 \[ ... \]
-  text = text.replace(
-      /\\\[\s*\n?([\s\S]*?)\n?\s*\\\]/g,
-      (_, content) => `$$\n${content.trim()}\n$$`
-  );
+    // 5) 松散数学块 [...] → $$...$$（向后兼容旧后端格式）
+    //    多行块：[ ... \n 内容 \n ... ]
+    // 块公式 \[ ... \]
+    text = text.replace(
+        /\\\[\s*\n?([\s\S]*?)\n?\s*\\\]/g,
+        (_, content) => `$$\n${content.trim()}\n$$`
+    );
 
 // 行内公式 \( ... \)
-  text = text.replace(
-      /\\\((.*?)\\\)/g,
-      (_, content) => `$${content}$`
-  );
+    text = text.replace(
+        /\\\((.*?)\\\)/g,
+        (_, content) => `$${content}$`
+    );
 
-  return text
+    return text
 }
