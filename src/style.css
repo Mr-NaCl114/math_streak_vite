@@ -102,7 +102,9 @@ h1, h2, h3, p {
 .stats-block {
     padding: 10px 12px;
     min-height: 80px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    contain: layout paint style;
+    transition: transform 0.2s ease;
+    will-change: transform;
 }
 
 .compact-card {
@@ -113,7 +115,6 @@ h1, h2, h3, p {
 
 .stats-block:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 16px rgba(13, 18, 22, 0.14);
 }
 
 .life-block {
@@ -624,6 +625,8 @@ button:hover {
 .flip-number {
     display: inline-block;
     transform-origin: center center;
+    backface-visibility: hidden;
+    will-change: transform, opacity;
 }
 
 .flip-number.flipping {
@@ -656,6 +659,7 @@ button:hover {
 /* ---- Streak shake (decaying amplitude) ---- */
 .streak-shaking {
     animation: shake-decay 1s ease-out;
+    will-change: transform;
 }
 
 @keyframes shake-decay {
@@ -756,4 +760,5 @@ button:hover {
 
 .title-bounce {
     animation: title-bounce 0.28s ease-out;
+    will-change: transform;
 }
