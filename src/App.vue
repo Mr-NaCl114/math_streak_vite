@@ -27,8 +27,6 @@ let typewriterTimer = null
 let typewriterFrame = null
 let typewriterLastPaint = 0
 const wsStatus = ref('连接中')
-const showMilestoneModal = ref(false)
-const showFailModal = ref(false)
 const showLoginModal = ref(false)
 const authMode = ref('login')
 const authMessage = ref('')
@@ -74,14 +72,13 @@ const gameStats = reactive({
     life: 0,
     maxLife: 1,
     accountTodayRemainingCount: 0,
-    answeringCount: 0,
-    failedAccountLevelHeatmap: []
+    answeringCount: 0
 })
 
 const isTodayCompleted = computed(() => gameStats.accountTodayRemainingCount === 0)
 
-const milestoneList = ref([])
-const failedQuestionList = ref([])
+// Incremental fail/interrupt tracking: key = "type-questionId"
+const failInterruptData = reactive({})
 
 // Flip counter animation state
 const streakFlipping = ref(false)
@@ -330,6 +327,17 @@ function applyStats(data) {
         lifeFlipping.value = true
     }
 
+    // Incrementally merge failInterruptList — only update changed entries
+    if (Array.isArray(data.failInterruptList)) {
+        for (const item of data.failInterruptList) {
+            const key = `${item.type}-${item.questionId}`
+            failInterruptData[key] = {
+                failTimes: item.failTimes ?? 0,
+                interruptTimes: item.interruptTimes ?? 0
+            }
+        }
+    }
+
     Object.assign(gameStats, data)
     if (data.accountLevel !== undefined) accountState.accountLevel = data.accountLevel
     if (data.accuracy !== undefined) accountState.accuracy = data.accuracy
@@ -524,8 +532,7 @@ onBeforeUnmount(() => {
             />
 
             <ExtraPanel
-                @show-failures="showFailModal = true"
-                @show-milestones="showMilestoneModal = true"
+                :fail-interrupt-data="failInterruptData"
             />
         </section>
 
@@ -544,16 +551,10 @@ onBeforeUnmount(() => {
         <AppModals
             :auth-message="authMessage"
             :auth-mode="authMode"
-            :failed-question-list="failedQuestionList"
             :login-form="loginForm"
-            :milestone-list="milestoneList"
             :register-form="registerForm"
-            :show-fail-modal="showFailModal"
             :show-login-modal="showLoginModal"
-            :show-milestone-modal="showMilestoneModal"
-            @close-failures="showFailModal = false"
             @close-login="showLoginModal = false"
-            @close-milestones="showMilestoneModal = false"
             @set-auth-mode="authMode = $event"
             @submit-login="submitLogin"
             @submit-register="submitRegister"

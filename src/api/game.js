@@ -75,9 +75,6 @@ export const GAME_WS_URL = 'ws://127.0.0.1:10001/ws/game'
 
 // 以下接口为后续后端扩展预留
 export const RESERVED_ENDPOINTS = {
-    milestones: '/api/game/milestones',
-    failedQuestions: '/api/game/failed-questions',
-    failedAccountLevelHeatmap: '/api/game/failed-account-level-heatmap',
     accountHistoryQuestions: '/api/account/history-questions',
     accountProfile: '/api/account/profile'
 }

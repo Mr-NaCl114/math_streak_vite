@@ -1,10 +1,6 @@
 <script setup>
 defineProps({
-    showMilestoneModal: {type: Boolean, required: true},
-    showFailModal: {type: Boolean, required: true},
     showLoginModal: {type: Boolean, required: true},
-    milestoneList: {type: Array, required: true},
-    failedQuestionList: {type: Array, required: true},
     authMode: {type: String, required: true},
     authMessage: {type: String, required: true},
     loginForm: {type: Object, required: true},
@@ -12,8 +8,6 @@ defineProps({
 })
 
 const emit = defineEmits([
-    'close-milestones',
-    'close-failures',
     'close-login',
     'set-auth-mode',
     'submit-login',
@@ -22,22 +16,6 @@ const emit = defineEmits([
 </script>
 
 <template>
-    <div v-if="showMilestoneModal" class="modal-mask" @click.self="emit('close-milestones')">
-        <article class="modal-card">
-            <h3>最大连胜里程碑</h3>
-            <p v-if="milestoneList.length === 0">暂无后端返回数据。</p>
-            <button class="secondary-btn" @click="emit('close-milestones')">关闭</button>
-        </article>
-    </div>
-
-    <div v-if="showFailModal" class="modal-mask" @click.self="emit('close-failures')">
-        <article class="modal-card">
-            <h3>连胜中断题目</h3>
-            <p v-if="failedQuestionList.length === 0">暂无后端返回数据。</p>
-            <button class="secondary-btn" @click="emit('close-failures')">关闭</button>
-        </article>
-    </div>
-
     <div v-if="showLoginModal" class="modal-mask" @click.self="emit('close-login')">
         <article class="modal-card">
             <div class="auth-tabs">

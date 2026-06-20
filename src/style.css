@@ -342,17 +342,164 @@ button:hover {
     color: rgba(13, 18, 22, 0.7);
 }
 
-.extra-actions {
+/* ---- ExtraPanel: fail-interrupt grid ---- */
+.extra-heading {
     display: flex;
-    gap: 10px;
-    margin-bottom: 14px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
 }
 
-.heatmap-placeholder {
-    border: 1px dashed rgba(0, 149, 217, 0.6);
-    border-radius: 10px;
-    padding: 16px;
+.settings-btn {
+    background: none;
+    border: 1px solid rgba(0, 149, 217, 0.2);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-btn:hover {
+    background: #eaf6ff;
+    border-color: rgba(0, 149, 217, 0.45);
+    transform: none;
+}
+
+.type-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.type-tab {
+    flex: 1;
+    padding: 6px 0;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 149, 217, 0.25);
     background: #f4faff;
+    color: rgba(13, 18, 22, 0.7);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.type-tab:hover {
+    background: #eaf6ff;
+}
+
+.type-tab.active {
+    background: #0095d9;
+    color: #ffffff;
+    border-color: #0095d9;
+}
+
+.fail-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.fail-square {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: default;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fail-square:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.grid-empty {
+    color: rgba(13, 18, 22, 0.45);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+/* ---- Settings popup ---- */
+.settings-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 18, 22, 0.35);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    z-index: 10;
+}
+
+.settings-box {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 149, 217, 0.2);
+    box-shadow: 0 8px 18px rgba(13, 18, 22, 0.1);
+    padding: 18px;
+    width: min(360px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.settings-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.settings-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(13, 18, 22, 0.75);
+}
+
+.settings-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 0;
+}
+
+.settings-radio input[type="radio"] {
+    accent-color: #0095d9;
+}
+
+.settings-footer {
+    font-size: 10px;
+    color: rgba(13, 18, 22, 0.3);
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* Settings transition */
+.settings-fade-enter-active,
+.settings-fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.settings-fade-enter-from,
+.settings-fade-leave-to {
+    opacity: 0;
 }
 
 .auth-tabs {
