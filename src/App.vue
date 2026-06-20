@@ -1,8 +1,13 @@
 <script setup>
 import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
-import {preprocessMath} from './utils/math-preprocessor'
 import {cancelScheduledMathRender, ensureMathliveLoaded, renderMarkdown, scheduleMathRender} from './services/math-renderer'
 import {fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer} from './api/game'
+import AiAnswerPanel from './components/AiAnswerPanel.vue'
+import AppHeader from './components/AppHeader.vue'
+import AppModals from './components/AppModals.vue'
+import ExtraPanel from './components/ExtraPanel.vue'
+import QuestionPanel from './components/QuestionPanel.vue'
+import StatsBanner from './components/StatsBanner.vue'
 
 const loadingQuestion = ref(false)
 const prefetching = ref(false)
@@ -107,6 +112,15 @@ const canSubmit = computed(() => {
     return Boolean(answerForm.latexAnswer.trim())
 })
 
+
+
+function setQuestionRenderRef(element) {
+    questionRenderRef.value = element
+}
+
+function setAiAnswerRenderRef(element) {
+    aiAnswerRenderRef.value = element
+}
 
 function resetAnswerInput() {
     answerForm.choice = ''
@@ -458,255 +472,91 @@ onBeforeUnmount(() => {
 
 <template>
     <main class="page">
-        <header class="arena-header">
-            <div>
-                <button
-                    :key="titleBounceKey"
-                    :class="{ 'title-bounce': titleBounce }"
-                    class="title-btn"
-                    @animationend="titleBounce = false"
-                    @click="handleTitleClick"
-                >Math Streak Arena{{ titleEmoji }}
-                </button>
-                <p>按连胜进阶难度，实时协同同场挑战。</p>
-            </div>
+        <AppHeader
+            :account-state="accountState"
+            :show-account-menu="showAccountMenu"
+            :title-bounce="titleBounce"
+            :title-bounce-key="titleBounceKey"
+            :title-emoji="titleEmoji"
+            @logout="logout"
+            @title-animation-end="titleBounce = false"
+            @title-click="handleTitleClick"
+            @toggle-auth-panel="toggleAuthPanel"
+        />
 
-            <div class="account-area">
-                <button v-if="false" class="secondary-btn" type="button" @click="toggleAuthPanel">
-                    {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
-                </button>
-
-                <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
-                    <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
-                    <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
-                    <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
-                    <button class="secondary-btn" type="button" @click="logout">退出登录</button>
-                </article>
-            </div>
-        </header>
-
-        <section class="stats-banner">
-            <article :class="{ 'life-low-glow': isLifeLow }" class="stats-block life-block compact-card">
-                <p class="stats-label">❤️ 生命值</p>
-                <div class="life-inline">
-                    <p class="stats-value">
-            <span
-                :class="{ flipping: lifeFlipping }"
-                class="flip-number"
-                @animationend="lifeFlipping = false"
-            >{{ gameStats.life }}</span>/{{ gameStats.maxLife }}
-                    </p>
-                    <div class="progress-track">
-                        <div :style="{ width: `${lifeProgress}%` }" class="progress-fill"></div>
-                    </div>
-                </div>
-            </article>
-            <article
-                :class="{ 'streak-shaking': streakShaking }"
-                class="stats-block compact-card"
-                @animationend="streakShaking = false"
-            >
-                <p class="stats-label">🔥 当前连胜</p>
-                <p class="stats-value">
-          <span
-              :class="{ flipping: streakFlipping }"
-              class="flip-number"
-              @animationend="streakFlipping = false"
-          >{{ gameStats.totalStreak }}</span>
-                </p>
-            </article>
-            <article class="stats-block compact-card">
-                <p class="stats-label">🏆 最大连胜</p>
-                <p class="stats-value">
-          <span
-              :class="{ flipping: maxStreakFlipping }"
-              class="flip-number"
-              @animationend="maxStreakFlipping = false"
-          >{{ gameStats.maxStreak }}</span>
-                </p>
-            </article>
-            <article
-                :class="{ 'streak-shaking': remainingCountShaking }"
-                class="stats-block compact-card"
-                @animationend="remainingCountShaking = false"
-            >
-                <p class="stats-label">📅 今日剩余次数</p>
-                <p class="stats-value">{{ gameStats.accountTodayRemainingCount }}</p>
-            </article>
-        </section>
+        <StatsBanner
+            :game-stats="gameStats"
+            :is-life-low="isLifeLow"
+            :life-flipping="lifeFlipping"
+            :life-progress="lifeProgress"
+            :max-streak-flipping="maxStreakFlipping"
+            :remaining-count-shaking="remainingCountShaking"
+            :streak-flipping="streakFlipping"
+            :streak-shaking="streakShaking"
+            @life-animation-end="lifeFlipping = false"
+            @max-streak-animation-end="maxStreakFlipping = false"
+            @remaining-shake-end="remainingCountShaking = false"
+            @streak-animation-end="streakFlipping = false"
+            @streak-shake-end="streakShaking = false"
+        />
 
         <section class="content-grid">
-            <section :class="{ 'question-panel-completed': isTodayCompleted }" class="panel question-panel">
-                <div class="question-heading">
-                    <div class="question-heading-left">
-                        <h2>{{ isTodayCompleted ? '' : '当前题目' }}</h2>
-                        <span v-if="question && !isTodayCompleted" class="question-meta">题号 #{{ question.questionId }} · 难度 {{
-                                question.difficultyLevel
-                            }}</span>
-                    </div>
-                    <Transition name="ai-button">
-                        <button
-                            v-if="answerCompleted && !isTodayCompleted"
-                            :disabled="loadingAiAnswer"
-                            class="ai-analysis-btn"
-                            type="button"
-                            @click="requestAiAnswer"
-                        >
-                            {{ loadingAiAnswer ? '解析中...' : 'AI解析' }}
-                        </button>
-                    </Transition>
-                </div>
+            <QuestionPanel
+                :answer-completed="answerCompleted"
+                :answer-form="answerForm"
+                :answering-count="gameStats.answeringCount"
+                :can-submit="canSubmit"
+                :correct-choice="correctChoice"
+                :error-message="errorMessage"
+                :is-today-completed="isTodayCompleted"
+                :loading-ai-answer="loadingAiAnswer"
+                :loading-question="loadingQuestion"
+                :question="question"
+                :rendered-submit-message="renderedSubmitMessage"
+                :submit-message="submitMessage"
+                :submitting="submitting"
+                @after-question-enter="renderMathContent"
+                @math-input="handleMathInput"
+                @next-question="handleNextQuestion"
+                @question-render-ref="setQuestionRenderRef"
+                @request-ai-answer="requestAiAnswer"
+                @submit-answer="handleSubmit"
+            />
 
-                <div v-if="isTodayCompleted" class="today-completed">
-                    <span class="today-completed-emoji">📜</span>
-                    <p class="today-completed-text">今日答题已完成</p>
-                    <p class="today-completed-sub">请明日再来挑战，继续冲刺连胜！</p>
-                </div>
-
-                <template v-if="!isTodayCompleted">
-                    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-
-                    <Transition mode="out-in" name="fade-slide" @after-enter="renderMathContent">
-                        <div v-if="question" :key="question.questionId" ref="questionRenderRef"
-                             class="question-container">
-                            <div class="question-description">{{ preprocessMath(question.description) }}</div>
-
-                            <form :class="{ 'answer-completed': answerCompleted }" class="answer-form"
-                                  @submit.prevent="handleSubmit">
-                                <template v-if="question.type === 1">
-                                    <label
-                                        v-for="item in ['A', 'B', 'C', 'D']"
-                                        :key="item"
-                                        :class="{
-                  'option-correct': answerCompleted && correctChoice === item,
-                  'option-wrong': answerCompleted && answerForm.choice === item && correctChoice !== item,
-                  'option-unselected': answerCompleted && correctChoice !== item && answerForm.choice !== item
-                }"
-                                        class="option"
-                                    >
-                                        <input v-model="answerForm.choice" :disabled="answerCompleted" :value="item" name="choice"
-                                               type="radio"/>
-                                        <span class="option-text">{{ item }}. {{
-                                                preprocessMath(question[`opt${item}`])
-                                            }}</span>
-                                    </label>
-                                </template>
-
-                                <template v-else>
-                                    <label class="latex-label" for="latex-input">LaTeX 填空答案</label>
-                                    <math-field
-                                        id="latex-input"
-                                        :value="answerForm.latexAnswer"
-                                        class="latex-editor"
-                                        virtual-keyboard-mode="onfocus"
-                                        @input="handleMathInput"
-                                    ></math-field>
-                                </template>
-
-                                <div :class="{ 'has-next-action': answerCompleted }" class="answer-actions">
-                                    <button :disabled="!canSubmit" class="primary-btn answer-action-btn" type="submit">
-                                        {{ submitting ? '提交中...' : '提交答案' }}
-                                    </button>
-                                    <Transition name="next-button">
-                                        <button
-                                            v-if="answerCompleted"
-                                            :disabled="loadingQuestion"
-                                            class="secondary-btn answer-action-btn"
-                                            type="button"
-                                            @click="handleNextQuestion"
-                                        >
-                                            {{ loadingQuestion ? '加载中...' : '下一题' }}
-                                        </button>
-                                    </Transition>
-                                </div>
-                            </form>
-                        </div>
-                    </Transition>
-
-                    <p v-if="loadingQuestion" class="loading-tip">正在切换题目...</p>
-                    <div class="question-footer">
-                        <p v-if="submitMessage" class="submit-message" v-html="renderedSubmitMessage"></p>
-                        <p class="answering-count">正在答题人数：{{ gameStats.answeringCount }}</p>
-                    </div>
-                </template>
-            </section>
-
-            <section class="panel extra-panel">
-                <h2>数据展示</h2>
-                <div class="extra-actions">
-                    <button class="secondary-btn" type="button" @click="showMilestoneModal = true">查看里程碑</button>
-                    <button class="secondary-btn" type="button" @click="showFailModal = true">查看连胜中断题目</button>
-                </div>
-                <div class="heatmap-placeholder">
-                    <h3>失败账号等级热力图</h3>
-                    <p>failedAccountLevelHeatmap</p>
-                </div>
-            </section>
+            <ExtraPanel
+                @show-failures="showFailModal = true"
+                @show-milestones="showMilestoneModal = true"
+            />
         </section>
 
-        <Transition name="fade-slide">
-            <section v-if="showAiAnswerPanel" class="panel ai-answer-panel">
-                <div class="modal-heading">
-                    <div>
-                        <p class="stats-label">当前题号 #{{ question?.questionId }}</p>
-                        <h3>AI 解析</h3>
-                    </div>
-                    <button class="secondary-btn" type="button" @click="showAiAnswerPanel = false">收起解析</button>
-                </div>
+        <AiAnswerPanel
+            :ai-answer-error="aiAnswerError"
+            :ai-answer-message="aiAnswerMessage"
+            :loading-ai-answer="loadingAiAnswer"
+            :question-id="question?.questionId"
+            :rendered-typewriter-text="renderedTypewriterText"
+            :show-ai-answer-panel="showAiAnswerPanel"
+            :typewriter-active="typewriterActive"
+            @ai-answer-render-ref="setAiAnswerRenderRef"
+            @close="showAiAnswerPanel = false"
+        />
 
-                <p v-if="loadingAiAnswer" class="loading-tip">正在生成 AI 解析...</p>
-                <p v-if="aiAnswerError" class="error">{{ aiAnswerError }}</p>
-                <div
-                    v-if="aiAnswerMessage"
-                    ref="aiAnswerRenderRef"
-                    class="markdown-body ai-answer-content"
-                >
-                    <span v-html="renderedTypewriterText"></span>
-                    <span v-if="typewriterActive" class="typewriter-cursor"></span>
-                </div>
-            </section>
-        </Transition>
-
-        <div v-if="showMilestoneModal" class="modal-mask" @click.self="showMilestoneModal = false">
-            <article class="modal-card">
-                <h3>最大连胜里程碑</h3>
-                <p v-if="milestoneList.length === 0">暂无后端返回数据。</p>
-                <button class="secondary-btn" @click="showMilestoneModal = false">关闭</button>
-            </article>
-        </div>
-
-        <div v-if="showFailModal" class="modal-mask" @click.self="showFailModal = false">
-            <article class="modal-card">
-                <h3>连胜中断题目</h3>
-                <p v-if="failedQuestionList.length === 0">暂无后端返回数据。</p>
-                <button class="secondary-btn" @click="showFailModal = false">关闭</button>
-            </article>
-        </div>
-
-
-        <div v-if="showLoginModal" class="modal-mask" @click.self="showLoginModal = false">
-            <article class="modal-card">
-                <div class="auth-tabs">
-                    <button class="secondary-btn" type="button" @click="authMode = 'login'">登录</button>
-                    <button class="secondary-btn" type="button" @click="authMode = 'register'">注册</button>
-                </div>
-
-                <form v-if="authMode === 'login'" class="answer-form" @submit.prevent="submitLogin">
-                    <input v-model="loginForm.account" class="auth-input" placeholder="账号" required type="text"/>
-                    <input v-model="loginForm.password" class="auth-input" placeholder="密码" required type="password"/>
-                    <button class="primary-btn" type="submit">登录</button>
-                </form>
-
-                <form v-else class="answer-form" @submit.prevent="submitRegister">
-                    <input v-model="registerForm.account" class="auth-input" placeholder="账号" required type="text"/>
-                    <input v-model="registerForm.nickname" class="auth-input" placeholder="昵称" required type="text"/>
-                    <input v-model="registerForm.password" class="auth-input" placeholder="密码" required
-                           type="password"/>
-                    <button class="primary-btn" type="submit">注册</button>
-                </form>
-
-                <p v-if="authMessage" class="submit-message">{{ authMessage }}</p>
-            </article>
-        </div>
+        <AppModals
+            :auth-message="authMessage"
+            :auth-mode="authMode"
+            :failed-question-list="failedQuestionList"
+            :login-form="loginForm"
+            :milestone-list="milestoneList"
+            :register-form="registerForm"
+            :show-fail-modal="showFailModal"
+            :show-login-modal="showLoginModal"
+            :show-milestone-modal="showMilestoneModal"
+            @close-failures="showFailModal = false"
+            @close-login="showLoginModal = false"
+            @close-milestones="showMilestoneModal = false"
+            @set-auth-mode="authMode = $event"
+            @submit-login="submitLogin"
+            @submit-register="submitRegister"
+        />
     </main>
 </template>
