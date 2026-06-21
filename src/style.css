@@ -197,6 +197,7 @@ h1, h2, h3, p {
 
 .question-panel h2, .extra-panel h2 {
     margin-bottom: 0;
+    font-size: 18px;
 }
 
 .question-heading-left {
@@ -434,7 +435,7 @@ button:hover {
     overflow-y: auto;
     flex: 1;
     align-content: start;
-    padding-right: 2px;
+    padding: 4px;
 }
 
 /* 极细滚动条 */

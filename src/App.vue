@@ -538,12 +538,14 @@ onBeforeUnmount(() => {
 
         <section class="content-grid">
             <QuestionPanel
+                :active-metric="activeMetric"
                 :answer-completed="answerCompleted"
                 :answer-form="answerForm"
                 :answering-count="gameStats.answeringCount"
                 :can-submit="canSubmit"
                 :correct-choice="correctChoice"
                 :error-message="errorMessage"
+                :fail-interrupt-data="failInterruptData"
                 :is-today-completed="isTodayCompleted"
                 :loading-ai-answer="loadingAiAnswer"
                 :loading-question="loadingQuestion"

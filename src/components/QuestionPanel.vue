@@ -1,7 +1,8 @@
 <script setup>
+import {computed} from 'vue'
 import {preprocessMath} from '../utils/math-preprocessor'
 
-defineProps({
+const props = defineProps({
     question: {type: Object, default: null},
     isTodayCompleted: {type: Boolean, required: true},
     answerCompleted: {type: Boolean, required: true},
@@ -14,7 +15,9 @@ defineProps({
     loadingQuestion: {type: Boolean, required: true},
     submitMessage: {type: String, required: true},
     renderedSubmitMessage: {type: String, required: true},
-    answeringCount: {type: Number, required: true}
+    answeringCount: {type: Number, required: true},
+    activeMetric: {type: String, required: true},
+    failInterruptData: {type: Object, required: true}
 })
 
 const emit = defineEmits([
@@ -29,6 +32,25 @@ const emit = defineEmits([
 function registerQuestionRef(element) {
     emit('question-render-ref', element)
 }
+
+const questionMetricValue = computed(() => {
+    if (!props.question) return 0
+    const key = `${props.question.type}-${props.question.questionId}`
+    const entry = props.failInterruptData[key]
+    if (!entry) return 0
+    return props.activeMetric === 'fail' ? (entry.failTimes || 0) : (entry.interruptTimes || 0)
+})
+
+const questionNumberColor = computed(() => {
+    const value = questionMetricValue.value
+    if (value === 0) return '#c8c8c8'
+    const max = 5
+    const ratio = Math.min(value / max, 1)
+    const r = Math.round(200 - ratio * (200 - 217))
+    const g = Math.round(200 - ratio * 200)
+    const b = Math.round(200 - ratio * 200)
+    return `rgb(${r}, ${g}, ${b})`
+})
 </script>
 
 <template>
@@ -36,9 +58,10 @@ function registerQuestionRef(element) {
         <div class="question-heading">
             <div class="question-heading-left">
                 <h2>{{ isTodayCompleted ? '' : '当前题目' }}</h2>
-                <span v-if="question && !isTodayCompleted" class="question-meta">题号 #{{ question.questionId }} · 难度 {{
-                        question.difficultyLevel
-                    }}</span>
+                <span v-if="question && !isTodayCompleted" class="question-meta">
+                    题号 <span class="question-number" :style="{ color: questionNumberColor }">#{{ question.questionId }}</span>
+                    · 难度 {{ question.difficultyLevel }}
+                </span>
             </div>
             <Transition name="ai-button">
                 <button
