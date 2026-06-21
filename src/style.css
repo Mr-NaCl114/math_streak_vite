@@ -401,20 +401,48 @@ button:hover {
 }
 
 .fail-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     min-height: 40px;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+    padding-right: 2px;
+}
+
+/* 极细滚动条 */
+.fail-grid::-webkit-scrollbar {
+    width: 3px;
+}
+
+.fail-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fail-grid::-webkit-scrollbar-thumb {
+    background: rgba(0, 149, 217, 0.25);
+    border-radius: 999px;
+}
+
+.fail-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 149, 217, 0.5);
+}
+
+/* Firefox 极细滚动条 */
+.fail-grid {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 149, 217, 0.25) transparent;
 }
 
 .fail-square {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
     cursor: default;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -574,6 +602,19 @@ button:hover {
     grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
     gap: 14px;
     align-items: stretch;
+}
+
+.extra-panel-cell {
+    position: relative;
+    min-height: 0;
+}
+
+.extra-panel {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .question-heading,
@@ -851,6 +892,23 @@ button:hover {
 @media (max-width: 900px) {
     .content-grid {
         grid-template-columns: 1fr;
+    }
+
+    .extra-panel-cell {
+        min-height: 240px;
+    }
+
+    .extra-panel {
+        position: static;
+        inset: auto;
+        overflow: visible;
+        display: block;
+    }
+
+    .fail-grid {
+        flex: none;
+        max-height: 360px;
+        overflow-y: auto;
     }
 
     .question-heading {

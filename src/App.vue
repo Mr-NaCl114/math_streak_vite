@@ -531,9 +531,11 @@ onBeforeUnmount(() => {
                 @submit-answer="handleSubmit"
             />
 
-            <ExtraPanel
-                :fail-interrupt-data="failInterruptData"
-            />
+            <div class="extra-panel-cell">
+                <ExtraPanel
+                    :fail-interrupt-data="failInterruptData"
+                />
+            </div>
         </section>
 
         <AiAnswerPanel
