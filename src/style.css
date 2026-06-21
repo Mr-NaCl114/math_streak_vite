@@ -195,7 +195,7 @@ h1, h2, h3, p {
     padding: 16px;
 }
 
-.question-panel h2, .extra-panel h2 {
+.question-panel h2, .extra-panel h2, .ai-answer-panel h3 {
     margin-bottom: 0;
     font-size: 18px;
 }

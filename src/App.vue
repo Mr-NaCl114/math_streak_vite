@@ -15,6 +15,7 @@ const submitting = ref(false)
 const answerCompleted = ref(false)
 const loadingAiAnswer = ref(false)
 const showAiAnswerPanel = ref(false)
+const cachedAiAnswer = ref({ questionId: null, message: '' })
 const errorMessage = ref('')
 const submitMessage = ref('')
 const aiAnswerMessage = ref('')
@@ -183,6 +184,18 @@ async function requestAiAnswer() {
     if (!question.value || loadingAiAnswer.value) return
 
     showAiAnswerPanel.value = true
+
+    // Use cached answer if available for the same question
+    if (cachedAiAnswer.value.questionId === question.value.questionId && cachedAiAnswer.value.message) {
+        stopTypewriter()
+        aiAnswerError.value = ''
+        aiAnswerMessage.value = cachedAiAnswer.value.message
+        typewriterText.value = cachedAiAnswer.value.message
+        renderedTypewriterText.value = await renderMarkdown(cachedAiAnswer.value.message)
+        typewriterActive.value = false
+        return
+    }
+
     loadingAiAnswer.value = true
     aiAnswerError.value = ''
     stopTypewriter()
@@ -197,6 +210,7 @@ async function requestAiAnswer() {
             sign: currentQuestionSign.value
         })
         aiAnswerMessage.value = data?.msg || '暂无 AI 解析内容。'
+        cachedAiAnswer.value = { questionId: question.value.questionId, message: aiAnswerMessage.value }
         startTypewriter(aiAnswerMessage.value)
     } catch (error) {
         aiAnswerError.value = error.message || 'AI 解析加载失败'
@@ -245,6 +259,7 @@ async function handleNextQuestion() {
     showAiAnswerPanel.value = false
     aiAnswerMessage.value = ''
     aiAnswerError.value = ''
+    cachedAiAnswer.value = { questionId: null, message: '' }
     stopTypewriter()
     typewriterText.value = ''
     renderedTypewriterText.value = ''
@@ -571,9 +586,12 @@ onBeforeUnmount(() => {
         </section>
 
         <AiAnswerPanel
+            :active-metric="activeMetric"
             :ai-answer-error="aiAnswerError"
             :ai-answer-message="aiAnswerMessage"
+            :fail-interrupt-data="failInterruptData"
             :loading-ai-answer="loadingAiAnswer"
+            :question="question"
             :question-id="question?.questionId"
             :rendered-typewriter-text="renderedTypewriterText"
             :show-ai-answer-panel="showAiAnswerPanel"
