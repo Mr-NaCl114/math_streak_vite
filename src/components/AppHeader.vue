@@ -7,7 +7,7 @@ defineProps({
     titleEmoji: {type: String, required: true}
 })
 
-const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-animation-end'])
+const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-animation-end', 'toggle-global-settings'])
 </script>
 
 <template>
@@ -24,17 +24,20 @@ const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-a
             <p>按连胜进阶难度，实时协同同场挑战。</p>
         </div>
 
-        <div class="account-area">
-            <button v-if="false" class="secondary-btn" type="button" @click="emit('toggle-auth-panel')">
-                {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
-            </button>
+        <div class="header-right">
+            <button class="header-settings-btn" title="设置" type="button" @click="emit('toggle-global-settings')">⚙️</button>
+            <div class="account-area">
+                <button v-if="false" class="secondary-btn" type="button" @click="emit('toggle-auth-panel')">
+                    {{ accountState.loggedIn ? (accountState.nickname || accountState.account) : '登录' }}
+                </button>
 
-            <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
-                <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
-                <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
-                <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
-                <button class="secondary-btn" type="button" @click="emit('logout')">退出登录</button>
-            </article>
+                <article v-if="showAccountMenu && accountState.loggedIn" class="account-menu">
+                    <p><strong>当前等级：</strong>{{ accountState.accountLevel }}</p>
+                    <p><strong>正确率：</strong>{{ accountState.accuracy }}</p>
+                    <p><strong>历史题目：</strong>{{ accountState.historyQuestions.length }}</p>
+                    <button class="secondary-btn" type="button" @click="emit('logout')">退出登录</button>
+                </article>
+            </div>
         </div>
     </header>
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import {cancelScheduledMathRender, ensureMathliveLoaded, renderMarkdown, scheduleMathRender} from './services/math-renderer'
 import {fetchAiAnswer, fetchCurrentQuestion, GAME_WS_URL, loginAccount, registerAccount, submitAnswer} from './api/game'
 import AiAnswerPanel from './components/AiAnswerPanel.vue'
@@ -85,6 +85,32 @@ const streakFlipping = ref(false)
 const maxStreakFlipping = ref(false)
 const lifeFlipping = ref(false)
 const streakShaking = ref(false)
+
+// Global settings state
+const showGlobalSettings = ref(false)
+const activeMetric = ref('fail') // 'fail' | 'interrupt'
+const sortOrder = ref('count') // 'count' | 'id'
+
+const SETTINGS_KEY = 'math-streak-global-settings'
+onMounted(() => {
+    try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY))
+        if (saved) {
+            if (saved.activeMetric === 'fail' || saved.activeMetric === 'interrupt') activeMetric.value = saved.activeMetric
+            if (saved.sortOrder === 'id' || saved.sortOrder === 'count') sortOrder.value = saved.sortOrder
+        }
+    } catch { /* ignore */ }
+})
+watch([activeMetric, sortOrder], () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        activeMetric: activeMetric.value,
+        sortOrder: sortOrder.value
+    }))
+})
+
+function toggleGlobalSettings() {
+    showGlobalSettings.value = !showGlobalSettings.value
+}
 
 // Title button easter egg state
 const titleClickCount = ref(0)
@@ -483,6 +509,7 @@ onBeforeUnmount(() => {
         <AppHeader
             :account-state="accountState"
             :show-account-menu="showAccountMenu"
+            :show-global-settings="showGlobalSettings"
             :title-bounce="titleBounce"
             :title-bounce-key="titleBounceKey"
             :title-emoji="titleEmoji"
@@ -490,6 +517,7 @@ onBeforeUnmount(() => {
             @title-animation-end="titleBounce = false"
             @title-click="handleTitleClick"
             @toggle-auth-panel="toggleAuthPanel"
+            @toggle-global-settings="toggleGlobalSettings"
         />
 
         <StatsBanner
@@ -533,7 +561,9 @@ onBeforeUnmount(() => {
 
             <div class="extra-panel-cell">
                 <ExtraPanel
+                    :active-metric="activeMetric"
                     :fail-interrupt-data="failInterruptData"
+                    :sort-order="sortOrder"
                 />
             </div>
         </section>
@@ -561,5 +591,57 @@ onBeforeUnmount(() => {
             @submit-login="submitLogin"
             @submit-register="submitRegister"
         />
+
+        <!-- Global Settings Popup -->
+        <Transition name="settings-fade">
+            <div v-if="showGlobalSettings" class="settings-backdrop" @click.self="showGlobalSettings = false">
+                <div class="settings-box">
+                    <h3 class="settings-title">设置</h3>
+                    <div class="settings-item">
+                        <span class="settings-label">数据展示类型</span>
+                        <label class="settings-radio">
+                            <input
+                                v-model="activeMetric"
+                                name="activeMetric"
+                                type="radio"
+                                value="fail"
+                            />
+                            答错次数
+                        </label>
+                        <label class="settings-radio">
+                            <input
+                                v-model="activeMetric"
+                                name="activeMetric"
+                                type="radio"
+                                value="interrupt"
+                            />
+                            中断次数
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <span class="settings-label">排序方式</span>
+                        <label class="settings-radio">
+                            <input
+                                v-model="sortOrder"
+                                name="sortOrder"
+                                type="radio"
+                                value="count"
+                            />
+                            按次数排序
+                        </label>
+                        <label class="settings-radio">
+                            <input
+                                v-model="sortOrder"
+                                name="sortOrder"
+                                type="radio"
+                                value="id"
+                            />
+                            按题号顺序
+                        </label>
+                    </div>
+                    <p class="settings-footer">xxxxxxxxx</p>
+                </div>
+            </div>
+        </Transition>
     </main>
 </template>
