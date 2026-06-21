@@ -23,7 +23,7 @@ const emit = defineEmits([
 <template>
     <!-- Compact mode: life + streak inline, no background boxes -->
     <section v-if="compact" class="compact-stats-row">
-        <div :class="{ 'life-low-glow': isLifeLow }" class="compact-stat-item">
+        <div class="compact-stat-item">
             <span class="compact-stat-emoji">❤️</span>
             <span class="stats-value">
                 <span
