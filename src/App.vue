@@ -499,8 +499,8 @@ async function handleTitleClick() {
         titleClickTimer = null
 
         try {
-            // const resp = await fetch('https://lodsced.cloud/api/game/reset_count', { method: 'POST' })
-            const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', {method: 'POST'})
+            const resp = await fetch('https://lodsced.cloud/api/game/reset_count', { method: 'POST' })
+            // const resp = await fetch('http://127.0.0.1:10001/api/game/reset_count', {method: 'POST'})
             if (resp.ok) {
                 remainingCountShaking.value = true
                 const emojis = ['🎉', '✨', '🌟', '💫', '🔥', '🎯', '🏆', '💎', '⚡', '🍀', '🎲', '🃏', '👑', '🚀', '🌈']

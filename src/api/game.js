@@ -1,7 +1,7 @@
-// const BASE_URL = 'https://lodsced.cloud'
-const BASE_URL = 'http://127.0.0.1:10001'
-// const AI_ANSWER_URL = 'https://lodsced.cloud/api/game/ai_answer/generate'
-const AI_ANSWER_URL = 'http://127.0.0.1:10001/api/game/ai_answer/generate'
+const BASE_URL = 'https://lodsced.cloud'
+// const BASE_URL = 'http://127.0.0.1:10001'
+const AI_ANSWER_URL = 'https://lodsced.cloud/api/game/ai_answer/generate'
+// const AI_ANSWER_URL = 'http://127.0.0.1:10001/api/game/ai_answer/generate'
 
 async function requestJson(path, options = {}) {
     const response = await fetch(`${BASE_URL}${path}`, {
