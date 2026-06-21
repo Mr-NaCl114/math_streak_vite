@@ -1,13 +1,14 @@
 <script setup>
 defineProps({
     accountState: {type: Object, required: true},
+    compactMode: {type: Boolean, required: true},
     showAccountMenu: {type: Boolean, required: true},
     titleBounce: {type: Boolean, required: true},
     titleBounceKey: {type: Number, required: true},
     titleEmoji: {type: String, required: true}
 })
 
-const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-animation-end', 'toggle-global-settings'])
+const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-animation-end', 'toggle-global-settings', 'toggle-compact-mode'])
 </script>
 
 <template>
@@ -25,6 +26,13 @@ const emit = defineEmits(['toggle-auth-panel', 'logout', 'title-click', 'title-a
         </div>
 
         <div class="header-right">
+            <button
+                :class="{ 'header-compact-btn-active': compactMode }"
+                class="header-compact-btn"
+                title="简洁模式"
+                type="button"
+                @click="emit('toggle-compact-mode')"
+            >🔴</button>
             <button class="header-settings-btn" title="设置" type="button" @click="emit('toggle-global-settings')">⚙️</button>
             <div class="account-area">
                 <button v-if="false" class="secondary-btn" type="button" @click="emit('toggle-auth-panel')">

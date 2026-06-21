@@ -91,6 +91,7 @@ const streakShaking = ref(false)
 const showGlobalSettings = ref(false)
 const activeMetric = ref('fail') // 'fail' | 'interrupt'
 const sortOrder = ref('count') // 'count' | 'id'
+const compactMode = ref(false)
 
 const SETTINGS_KEY = 'math-streak-global-settings'
 onMounted(() => {
@@ -99,18 +100,24 @@ onMounted(() => {
         if (saved) {
             if (saved.activeMetric === 'fail' || saved.activeMetric === 'interrupt') activeMetric.value = saved.activeMetric
             if (saved.sortOrder === 'id' || saved.sortOrder === 'count') sortOrder.value = saved.sortOrder
+            if (typeof saved.compactMode === 'boolean') compactMode.value = saved.compactMode
         }
     } catch { /* ignore */ }
 })
-watch([activeMetric, sortOrder], () => {
+watch([activeMetric, sortOrder, compactMode], () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         activeMetric: activeMetric.value,
-        sortOrder: sortOrder.value
+        sortOrder: sortOrder.value,
+        compactMode: compactMode.value
     }))
 })
 
 function toggleGlobalSettings() {
     showGlobalSettings.value = !showGlobalSettings.value
+}
+
+function toggleCompactMode() {
+    compactMode.value = !compactMode.value
 }
 
 // Title button easter egg state
@@ -522,7 +529,9 @@ onBeforeUnmount(() => {
 <template>
     <main class="page">
         <AppHeader
+            v-if="!compactMode"
             :account-state="accountState"
+            :compact-mode="compactMode"
             :show-account-menu="showAccountMenu"
             :show-global-settings="showGlobalSettings"
             :title-bounce="titleBounce"
@@ -532,10 +541,27 @@ onBeforeUnmount(() => {
             @title-animation-end="titleBounce = false"
             @title-click="handleTitleClick"
             @toggle-auth-panel="toggleAuthPanel"
+            @toggle-compact-mode="toggleCompactMode"
             @toggle-global-settings="toggleGlobalSettings"
         />
 
+        <!-- Compact mode header bar -->
+        <header v-if="compactMode" class="compact-header">
+            <div class="header-right">
+                <button
+                    :class="{ 'header-compact-btn-active': compactMode }"
+                    class="header-compact-btn"
+                    title="退出简洁模式"
+                    type="button"
+                    @click="toggleCompactMode"
+                >🟢</button>
+                <button class="header-settings-btn" title="网站设置" type="button" @click="toggleGlobalSettings">⚙️</button>
+            </div>
+        </header>
+
         <StatsBanner
+            v-if="!compactMode"
+            :compact="false"
             :game-stats="gameStats"
             :is-life-low="isLifeLow"
             :life-flipping="lifeFlipping"
@@ -551,7 +577,22 @@ onBeforeUnmount(() => {
             @streak-shake-end="streakShaking = false"
         />
 
-        <section class="content-grid">
+        <!-- Compact stats row -->
+        <StatsBanner
+            v-if="compactMode"
+            :compact="true"
+            :game-stats="gameStats"
+            :is-life-low="isLifeLow"
+            :life-flipping="lifeFlipping"
+            :life-progress="lifeProgress"
+            :streak-flipping="streakFlipping"
+            :streak-shaking="streakShaking"
+            @life-animation-end="lifeFlipping = false"
+            @streak-animation-end="streakFlipping = false"
+            @streak-shake-end="streakShaking = false"
+        />
+
+        <section :class="{ 'content-grid-compact': compactMode }" class="content-grid">
             <QuestionPanel
                 :active-metric="activeMetric"
                 :answer-completed="answerCompleted"
@@ -576,7 +617,7 @@ onBeforeUnmount(() => {
                 @submit-answer="handleSubmit"
             />
 
-            <div class="extra-panel-cell">
+            <div v-if="!compactMode" class="extra-panel-cell">
                 <ExtraPanel
                     :active-metric="activeMetric"
                     :fail-interrupt-data="failInterruptData"
